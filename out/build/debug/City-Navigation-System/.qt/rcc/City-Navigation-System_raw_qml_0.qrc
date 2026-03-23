@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/qt/qml/city-navigation-system/">
+    <file alias="main.qml">D:/Code/source/repos/City-Navigation-System/City-Navigation-System/main.qml</file>
+  </qresource>
+</RCC>
+

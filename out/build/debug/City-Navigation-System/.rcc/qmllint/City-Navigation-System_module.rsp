@@ -1,0 +1,14 @@
+-I
+D:/Code/source/repos/City-Navigation-System/out/build/debug/City-Navigation-System
+-I
+D:/Code/source/repos/City-Navigation-System/out/build/debug/City-Navigation-System/city-navigation-system
+-I
+D:/Code/source/repos/City-Navigation-System/out/build/debug/City-Navigation-System
+-I
+E:/Qt/6.10.2/msvc2022_64/qml
+--resource
+D:/Code/source/repos/City-Navigation-System/out/build/debug/City-Navigation-System/.qt/rcc/qmake_city-navigation-system.qrc
+--resource
+D:/Code/source/repos/City-Navigation-System/out/build/debug/City-Navigation-System/.qt/rcc/City-Navigation-System_raw_qml_0.qrc
+--module
+city-navigation-system
