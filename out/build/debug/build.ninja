@@ -143,7 +143,7 @@ build cmake_object_order_depends_target_City-Navigation-System: phony || City-Na
 
 build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\City-Navigation-System_autogen\mocs_compilation.cpp.obj: CXX_COMPILER__City-Navigation-System_unscanned_Debug D$:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\mocs_compilation.cpp || cmake_object_order_depends_target_City-Navigation-System
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_OPENGL_LIB -DQT_QMLINTEGRATION_LIB -DQT_QML_LIB -DQT_QUICK_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
-  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd -Zc:__cplusplus -permissive- -utf-8
+  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd /utf-8 -Zc:__cplusplus -permissive- -utf-8
   INCLUDES = -ID:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\include -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System\src -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQml -external:IE:\Qt\6.10.2\msvc2022_64\include -external:IE:\Qt\6.10.2\msvc2022_64\include\QtCore -external:IE:\Qt\6.10.2\msvc2022_64\mkspecs\win32-msvc -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQmlIntegration -external:IE:\Qt\6.10.2\msvc2022_64\include\QtNetwork -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQuick -external:IE:\Qt\6.10.2\msvc2022_64\include\QtGui -external:IE:\Qt\6.10.2\msvc2022_64\include\QtOpenGL -external:W0
   OBJECT_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
   OBJECT_FILE_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir\City-Navigation-System_autogen
@@ -152,7 +152,7 @@ build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\City-Navigati
 
 build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\main.cpp.obj: CXX_COMPILER__City-Navigation-System_unscanned_Debug D$:\Code\source\repos\City-Navigation-System\City-Navigation-System\src\main.cpp || cmake_object_order_depends_target_City-Navigation-System
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_OPENGL_LIB -DQT_QMLINTEGRATION_LIB -DQT_QML_LIB -DQT_QUICK_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
-  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd -Zc:__cplusplus -permissive- -utf-8
+  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd /utf-8 -Zc:__cplusplus -permissive- -utf-8
   INCLUDES = -ID:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\include -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System\src -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQml -external:IE:\Qt\6.10.2\msvc2022_64\include -external:IE:\Qt\6.10.2\msvc2022_64\include\QtCore -external:IE:\Qt\6.10.2\msvc2022_64\mkspecs\win32-msvc -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQmlIntegration -external:IE:\Qt\6.10.2\msvc2022_64\include\QtNetwork -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQuick -external:IE:\Qt\6.10.2\msvc2022_64\include\QtGui -external:IE:\Qt\6.10.2\msvc2022_64\include\QtOpenGL -external:W0
   OBJECT_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
   OBJECT_FILE_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src
@@ -161,7 +161,7 @@ build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\main.cpp.
 
 build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\DataModel\Graph.cpp.obj: CXX_COMPILER__City-Navigation-System_unscanned_Debug D$:\Code\source\repos\City-Navigation-System\City-Navigation-System\src\core\DataModel\Graph.cpp || cmake_object_order_depends_target_City-Navigation-System
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_OPENGL_LIB -DQT_QMLINTEGRATION_LIB -DQT_QML_LIB -DQT_QUICK_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
-  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd -Zc:__cplusplus -permissive- -utf-8
+  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd /utf-8 -Zc:__cplusplus -permissive- -utf-8
   INCLUDES = -ID:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\include -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System\src -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQml -external:IE:\Qt\6.10.2\msvc2022_64\include -external:IE:\Qt\6.10.2\msvc2022_64\include\QtCore -external:IE:\Qt\6.10.2\msvc2022_64\mkspecs\win32-msvc -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQmlIntegration -external:IE:\Qt\6.10.2\msvc2022_64\include\QtNetwork -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQuick -external:IE:\Qt\6.10.2\msvc2022_64\include\QtGui -external:IE:\Qt\6.10.2\msvc2022_64\include\QtOpenGL -external:W0
   OBJECT_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
   OBJECT_FILE_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\DataModel
@@ -170,7 +170,7 @@ build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\Data
 
 build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\modules\DataGenerator.cpp.obj: CXX_COMPILER__City-Navigation-System_unscanned_Debug D$:\Code\source\repos\City-Navigation-System\City-Navigation-System\src\core\modules\DataGenerator.cpp || cmake_object_order_depends_target_City-Navigation-System
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_OPENGL_LIB -DQT_QMLINTEGRATION_LIB -DQT_QML_LIB -DQT_QUICK_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
-  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd -Zc:__cplusplus -permissive- -utf-8
+  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd /utf-8 -Zc:__cplusplus -permissive- -utf-8
   INCLUDES = -ID:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\include -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System\src -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQml -external:IE:\Qt\6.10.2\msvc2022_64\include -external:IE:\Qt\6.10.2\msvc2022_64\include\QtCore -external:IE:\Qt\6.10.2\msvc2022_64\mkspecs\win32-msvc -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQmlIntegration -external:IE:\Qt\6.10.2\msvc2022_64\include\QtNetwork -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQuick -external:IE:\Qt\6.10.2\msvc2022_64\include\QtGui -external:IE:\Qt\6.10.2\msvc2022_64\include\QtOpenGL -external:W0
   OBJECT_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
   OBJECT_FILE_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\modules
@@ -179,7 +179,7 @@ build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\modu
 
 build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\modules\PathFinder.cpp.obj: CXX_COMPILER__City-Navigation-System_unscanned_Debug D$:\Code\source\repos\City-Navigation-System\City-Navigation-System\src\core\modules\PathFinder.cpp || cmake_object_order_depends_target_City-Navigation-System
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_OPENGL_LIB -DQT_QMLINTEGRATION_LIB -DQT_QML_LIB -DQT_QUICK_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
-  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd -Zc:__cplusplus -permissive- -utf-8
+  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd /utf-8 -Zc:__cplusplus -permissive- -utf-8
   INCLUDES = -ID:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\include -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System\src -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQml -external:IE:\Qt\6.10.2\msvc2022_64\include -external:IE:\Qt\6.10.2\msvc2022_64\include\QtCore -external:IE:\Qt\6.10.2\msvc2022_64\mkspecs\win32-msvc -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQmlIntegration -external:IE:\Qt\6.10.2\msvc2022_64\include\QtNetwork -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQuick -external:IE:\Qt\6.10.2\msvc2022_64\include\QtGui -external:IE:\Qt\6.10.2\msvc2022_64\include\QtOpenGL -external:W0
   OBJECT_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
   OBJECT_FILE_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\modules
@@ -188,7 +188,7 @@ build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\modu
 
 build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\modules\SpatialSearch.cpp.obj: CXX_COMPILER__City-Navigation-System_unscanned_Debug D$:\Code\source\repos\City-Navigation-System\City-Navigation-System\src\core\modules\SpatialSearch.cpp || cmake_object_order_depends_target_City-Navigation-System
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_OPENGL_LIB -DQT_QMLINTEGRATION_LIB -DQT_QML_LIB -DQT_QUICK_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
-  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd -Zc:__cplusplus -permissive- -utf-8
+  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd /utf-8 -Zc:__cplusplus -permissive- -utf-8
   INCLUDES = -ID:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\include -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System\src -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQml -external:IE:\Qt\6.10.2\msvc2022_64\include -external:IE:\Qt\6.10.2\msvc2022_64\include\QtCore -external:IE:\Qt\6.10.2\msvc2022_64\mkspecs\win32-msvc -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQmlIntegration -external:IE:\Qt\6.10.2\msvc2022_64\include\QtNetwork -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQuick -external:IE:\Qt\6.10.2\msvc2022_64\include\QtGui -external:IE:\Qt\6.10.2\msvc2022_64\include\QtOpenGL -external:W0
   OBJECT_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
   OBJECT_FILE_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\modules
@@ -197,7 +197,7 @@ build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\modu
 
 build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\modules\TrafficSimulator.cpp.obj: CXX_COMPILER__City-Navigation-System_unscanned_Debug D$:\Code\source\repos\City-Navigation-System\City-Navigation-System\src\core\modules\TrafficSimulator.cpp || cmake_object_order_depends_target_City-Navigation-System
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_OPENGL_LIB -DQT_QMLINTEGRATION_LIB -DQT_QML_LIB -DQT_QUICK_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
-  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd -Zc:__cplusplus -permissive- -utf-8
+  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd /utf-8 -Zc:__cplusplus -permissive- -utf-8
   INCLUDES = -ID:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\include -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System\src -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQml -external:IE:\Qt\6.10.2\msvc2022_64\include -external:IE:\Qt\6.10.2\msvc2022_64\include\QtCore -external:IE:\Qt\6.10.2\msvc2022_64\mkspecs\win32-msvc -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQmlIntegration -external:IE:\Qt\6.10.2\msvc2022_64\include\QtNetwork -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQuick -external:IE:\Qt\6.10.2\msvc2022_64\include\QtGui -external:IE:\Qt\6.10.2\msvc2022_64\include\QtOpenGL -external:W0
   OBJECT_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
   OBJECT_FILE_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\modules
@@ -206,7 +206,7 @@ build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\core\modu
 
 build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\gui\MainWindow.cpp.obj: CXX_COMPILER__City-Navigation-System_unscanned_Debug D$:\Code\source\repos\City-Navigation-System\City-Navigation-System\src\gui\MainWindow.cpp || cmake_object_order_depends_target_City-Navigation-System
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_OPENGL_LIB -DQT_QMLINTEGRATION_LIB -DQT_QML_LIB -DQT_QUICK_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
-  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd -Zc:__cplusplus -permissive- -utf-8
+  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd /utf-8 -Zc:__cplusplus -permissive- -utf-8
   INCLUDES = -ID:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\include -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System\src -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQml -external:IE:\Qt\6.10.2\msvc2022_64\include -external:IE:\Qt\6.10.2\msvc2022_64\include\QtCore -external:IE:\Qt\6.10.2\msvc2022_64\mkspecs\win32-msvc -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQmlIntegration -external:IE:\Qt\6.10.2\msvc2022_64\include\QtNetwork -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQuick -external:IE:\Qt\6.10.2\msvc2022_64\include\QtGui -external:IE:\Qt\6.10.2\msvc2022_64\include\QtOpenGL -external:W0
   OBJECT_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
   OBJECT_FILE_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\gui
@@ -215,7 +215,7 @@ build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\gui\MainW
 
 build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\gui\MapView.cpp.obj: CXX_COMPILER__City-Navigation-System_unscanned_Debug D$:\Code\source\repos\City-Navigation-System\City-Navigation-System\src\gui\MapView.cpp || cmake_object_order_depends_target_City-Navigation-System
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_OPENGL_LIB -DQT_QMLINTEGRATION_LIB -DQT_QML_LIB -DQT_QUICK_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
-  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd -Zc:__cplusplus -permissive- -utf-8
+  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd /utf-8 -Zc:__cplusplus -permissive- -utf-8
   INCLUDES = -ID:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\include -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System\src -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQml -external:IE:\Qt\6.10.2\msvc2022_64\include -external:IE:\Qt\6.10.2\msvc2022_64\include\QtCore -external:IE:\Qt\6.10.2\msvc2022_64\mkspecs\win32-msvc -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQmlIntegration -external:IE:\Qt\6.10.2\msvc2022_64\include\QtNetwork -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQuick -external:IE:\Qt\6.10.2\msvc2022_64\include\QtGui -external:IE:\Qt\6.10.2\msvc2022_64\include\QtOpenGL -external:W0
   OBJECT_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
   OBJECT_FILE_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\gui
@@ -224,7 +224,7 @@ build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\src\gui\MapVi
 
 build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\city-navigation-system_qmltyperegistrations.cpp.obj: CXX_COMPILER__City-Navigation-System_unscanned_Debug D$:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\city-navigation-system_qmltyperegistrations.cpp || cmake_object_order_depends_target_City-Navigation-System
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_OPENGL_LIB -DQT_QMLINTEGRATION_LIB -DQT_QML_LIB -DQT_QUICK_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
-  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd -Zc:__cplusplus -permissive- -utf-8 /bigobj
+  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd /utf-8 -Zc:__cplusplus -permissive- -utf-8 /bigobj
   INCLUDES = -ID:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\include -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System\src -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQml -external:IE:\Qt\6.10.2\msvc2022_64\include -external:IE:\Qt\6.10.2\msvc2022_64\include\QtCore -external:IE:\Qt\6.10.2\msvc2022_64\mkspecs\win32-msvc -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQmlIntegration -external:IE:\Qt\6.10.2\msvc2022_64\include\QtNetwork -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQuick -external:IE:\Qt\6.10.2\msvc2022_64\include\QtGui -external:IE:\Qt\6.10.2\msvc2022_64\include\QtOpenGL -external:W0
   OBJECT_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
   OBJECT_FILE_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
@@ -233,7 +233,7 @@ build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\city-navigati
 
 build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\.qt\rcc\qrc_qmake_city-navigation-system.cpp.obj: CXX_COMPILER__City-Navigation-System_unscanned_Debug D$:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\.qt\rcc\qrc_qmake_city-navigation-system.cpp || cmake_object_order_depends_target_City-Navigation-System
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_OPENGL_LIB -DQT_QMLINTEGRATION_LIB -DQT_QML_LIB -DQT_QUICK_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
-  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd -Zc:__cplusplus -permissive- -utf-8
+  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd /utf-8 -Zc:__cplusplus -permissive- -utf-8
   INCLUDES = -ID:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\include -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System\src -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQml -external:IE:\Qt\6.10.2\msvc2022_64\include -external:IE:\Qt\6.10.2\msvc2022_64\include\QtCore -external:IE:\Qt\6.10.2\msvc2022_64\mkspecs\win32-msvc -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQmlIntegration -external:IE:\Qt\6.10.2\msvc2022_64\include\QtNetwork -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQuick -external:IE:\Qt\6.10.2\msvc2022_64\include\QtGui -external:IE:\Qt\6.10.2\msvc2022_64\include\QtOpenGL -external:W0
   OBJECT_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
   OBJECT_FILE_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir\.qt\rcc
@@ -242,7 +242,7 @@ build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\.qt\rcc\qrc_q
 
 build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\.rcc\qmlcache\City-Navigation-System_qmlcache_loader.cpp.obj: CXX_COMPILER__City-Navigation-System_unscanned_Debug D$:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\.rcc\qmlcache\City-Navigation-System_qmlcache_loader.cpp || cmake_object_order_depends_target_City-Navigation-System
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_OPENGL_LIB -DQT_QMLINTEGRATION_LIB -DQT_QML_LIB -DQT_QUICK_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
-  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd -Zc:__cplusplus -permissive- -utf-8
+  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd /utf-8 -Zc:__cplusplus -permissive- -utf-8
   INCLUDES = -ID:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\include -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System\src -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQml -external:IE:\Qt\6.10.2\msvc2022_64\include -external:IE:\Qt\6.10.2\msvc2022_64\include\QtCore -external:IE:\Qt\6.10.2\msvc2022_64\mkspecs\win32-msvc -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQmlIntegration -external:IE:\Qt\6.10.2\msvc2022_64\include\QtNetwork -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQuick -external:IE:\Qt\6.10.2\msvc2022_64\include\QtGui -external:IE:\Qt\6.10.2\msvc2022_64\include\QtOpenGL -external:W0
   OBJECT_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
   OBJECT_FILE_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir\.rcc\qmlcache
@@ -251,7 +251,7 @@ build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\.rcc\qmlcache
 
 build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\.rcc\qmlcache\City-Navigation-System_main_qml.cpp.obj: CXX_COMPILER__City-Navigation-System_unscanned_Debug D$:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\.rcc\qmlcache\City-Navigation-System_main_qml.cpp || cmake_object_order_depends_target_City-Navigation-System
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_OPENGL_LIB -DQT_QMLINTEGRATION_LIB -DQT_QML_LIB -DQT_QUICK_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
-  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd -Zc:__cplusplus -permissive- -utf-8
+  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd /utf-8 -Zc:__cplusplus -permissive- -utf-8
   INCLUDES = -ID:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\include -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System\src -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQml -external:IE:\Qt\6.10.2\msvc2022_64\include -external:IE:\Qt\6.10.2\msvc2022_64\include\QtCore -external:IE:\Qt\6.10.2\msvc2022_64\mkspecs\win32-msvc -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQmlIntegration -external:IE:\Qt\6.10.2\msvc2022_64\include\QtNetwork -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQuick -external:IE:\Qt\6.10.2\msvc2022_64\include\QtGui -external:IE:\Qt\6.10.2\msvc2022_64\include\QtOpenGL -external:W0
   OBJECT_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
   OBJECT_FILE_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir\.rcc\qmlcache
@@ -260,7 +260,7 @@ build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\.rcc\qmlcache
 
 build City-Navigation-System\CMakeFiles\City-Navigation-System.dir\.qt\rcc\qrc_City-Navigation-System_raw_qml_0.cpp.obj: CXX_COMPILER__City-Navigation-System_unscanned_Debug D$:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\.qt\rcc\qrc_City-Navigation-System_raw_qml_0.cpp || cmake_object_order_depends_target_City-Navigation-System
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_OPENGL_LIB -DQT_QMLINTEGRATION_LIB -DQT_QML_LIB -DQT_QUICK_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
-  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd -Zc:__cplusplus -permissive- -utf-8
+  FLAGS = -DQT_QML_DEBUG /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd /utf-8 -Zc:__cplusplus -permissive- -utf-8
   INCLUDES = -ID:\Code\source\repos\City-Navigation-System\out\build\debug\City-Navigation-System\City-Navigation-System_autogen\include -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System\src -ID:\Code\source\repos\City-Navigation-System\City-Navigation-System -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQml -external:IE:\Qt\6.10.2\msvc2022_64\include -external:IE:\Qt\6.10.2\msvc2022_64\include\QtCore -external:IE:\Qt\6.10.2\msvc2022_64\mkspecs\win32-msvc -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQmlIntegration -external:IE:\Qt\6.10.2\msvc2022_64\include\QtNetwork -external:IE:\Qt\6.10.2\msvc2022_64\include\QtQuick -external:IE:\Qt\6.10.2\msvc2022_64\include\QtGui -external:IE:\Qt\6.10.2\msvc2022_64\include\QtOpenGL -external:W0
   OBJECT_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir
   OBJECT_FILE_DIR = City-Navigation-System\CMakeFiles\City-Navigation-System.dir\.qt\rcc

@@ -5,13 +5,14 @@ Window {
     visible: true
     width: 640
     height: 480
-    title: "City-Navigation-System"
+    title: "城市导航系统"
     Text {
         anchors.fill: parent
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         font.bold: true
+        font.family: "Microsoft YaHei, SimHei, Arial Unicode MS, WenQuanYi Zen Hei"
         font.pointSize: 42
-        text: "Hello World!"
+        text: "😢(¬‿¬)"
     }
 }

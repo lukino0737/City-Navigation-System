@@ -271,6 +271,9 @@ QT_DIR:PATH=E:/Qt/6.10.2/msvc2022_64/lib/cmake/Qt6
 //The directory containing a CMake configuration file for Qt6Concurrent.
 Qt6Concurrent_DIR:PATH=E:/Qt/6.10.2/msvc2022_64/lib/cmake/Qt6Concurrent
 
+//The directory containing a CMake configuration file for Qt6Core5Compat.
+Qt6Core5Compat_DIR:PATH=Qt6Core5Compat_DIR-NOTFOUND
+
 //The directory containing a CMake configuration file for Qt6CoreTools.
 Qt6CoreTools_DIR:PATH=E:/Qt/6.10.2/msvc2022_64/lib/cmake/Qt6CoreTools
 

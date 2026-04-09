@@ -15,8 +15,7 @@
 - **开发工具**: Visual Studio 2022 (配合 Qt VS Tools 扩展) 或 Qt Creator
 - **构建系统**: CMake 3.16+
 - **编译器**: MSVC 2019/2022 64-bit
-- **Qt 版本**: Qt 6.2+ (需要组件: Qt Quick, Qt QML, Qt Core, Qt Gui)
-
+- **Qt 版本**: Qt 6.10+(需要组件: Qt Quick, Qt QML, Qt Core, Qt Gui)
 ## 3. 项目结构
 ```text
 City-Navigation-System/
