@@ -2,10 +2,12 @@
 #include <fstream>
 #include <iomanip>
 
-
-Graph::Graph() {}
-Graph::~Graph() {}
-
+std::vector<Node> getNodes(Graph& graph) {
+    return graph.getAllNodes();
+}
+std::vector<Edge> getEdges(Graph& graph) {
+    return graph.getAllEdges();
+}
 bool Graph::load(std::string filePath) {
     std::ifstream file(filePath);
     if (!file.is_open()) return false;

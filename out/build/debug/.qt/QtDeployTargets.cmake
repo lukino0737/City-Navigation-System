@@ -1,3 +1,0 @@
-set(__QT_DEPLOY_TARGET_City-Navigation-System_FILE D:/Code/source/repos/City-Navigation-System/out/build/debug/City-Navigation-System/City-Navigation-System.exe)
-set(__QT_DEPLOY_TARGET_City-Navigation-System_TYPE EXECUTABLE)
-set(__QT_DEPLOY_TARGET_City-Navigation-System_RUNTIME_DLLS E:/Qt/6.10.2/msvc2022_64/bin/Qt6Quickd.dll;E:/Qt/6.10.2/msvc2022_64/bin/Qt6OpenGLd.dll;E:/Qt/6.10.2/msvc2022_64/bin/Qt6Guid.dll;E:/Qt/6.10.2/msvc2022_64/bin/Qt6QmlMetad.dll;E:/Qt/6.10.2/msvc2022_64/bin/Qt6QmlModelsd.dll;E:/Qt/6.10.2/msvc2022_64/bin/Qt6QmlWorkerScriptd.dll;E:/Qt/6.10.2/msvc2022_64/bin/Qt6Qmld.dll;E:/Qt/6.10.2/msvc2022_64/bin/Qt6Networkd.dll;E:/Qt/6.10.2/msvc2022_64/bin/Qt6Cored.dll)

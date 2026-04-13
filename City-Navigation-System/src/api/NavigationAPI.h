@@ -13,28 +13,68 @@ struct Node {
     int y;
 };
 
-
-inline void to_json(nlohmann::json& j, const Node& p) {
-    j = nlohmann::json{{"id", p.Node_id}, {"x", p.x}, {"y", p.y}};
-}
-
-inline void from_json(const nlohmann::json& j, Node& p) {
-    j.at("id").get_to(p.Node_id);
-    j.at("x").get_to(p.x);
-    j.at("y").get_to(p.y);
-}
-
-struct PathResult {
-    std::vector<int> pathNodes; // 途径的节点ID序列
-    double totalCost;           // 总花费（距离或时间）
+struct Edge {
+    int id;
+    int source;     // 起点 ID
+    int target;     // 终点 ID
+    double length;
+    double capacity; 
+    int currentCars; 
 };
+
+// 寻路结果包
+struct PathResult {
+    bool success;                   // 是否成功找到路径
+    std::vector<int> path_nodes;    // 途径的节点ID序列
+    double total_cost;              // 总花费（距离或时间）
+
+    // 用来在界面上做动画的数据
+    double time_spent_ms;           // 算法纯计算耗时(毫秒)
+    std::vector<int> explored_nodes;// 算法探索过的节点顺序（像水波一样渲染）
+};
+
+// ==========================================
+// 序列化逻辑 (移入 nlohmann 命名空间以支持 ADL)
+// ==========================================
+namespace nlohmann {
+    template <>
+    struct adl_serializer<Node> {
+        static void to_json(json& j, const Node& p) {
+            j = json{{"id", p.Node_id}, {"x", p.x}, {"y", p.y}};
+        }
+        static void from_json(const json& j, Node& p) {
+            j.at("id").get_to(p.Node_id);
+            j.at("x").get_to(p.x);
+            j.at("y").get_to(p.y);
+        }
+    };
+
+    template <>
+    struct adl_serializer<Edge> {
+        static void to_json(json& j, const Edge& e) {
+            j = json{{"id", e.id}, {"source", e.source}, {"target", e.target}, 
+                     {"length", e.length}, {"capacity", e.capacity}, {"currentCars", e.currentCars}};
+        }
+        static void from_json(const json& j, Edge& e) {
+            j.at("id").get_to(e.id);
+            j.at("source").get_to(e.source);
+            j.at("target").get_to(e.target);
+            j.at("length").get_to(e.length);
+            j.at("capacity").get_to(e.capacity);
+            j.at("currentCars").get_to(e.currentCars);
+        }
+    };
+}
 
 // ==========================================
 // 成员 C 提供的接口 (底层数据加载)
 // ==========================================
+std::vector<Node> getNodes(Graph& graph);
+std::vector<Edge> getEdges(Graph& graph);
+
 // 生成地图并存盘
 bool generateAndSaveMap(int nodeCount, std::string filePath);
-// 读取地图文件到内存 (更新为 2 个参数)
+// 读取地图文件到内存
 bool loadMap(Graph& graph, std::string filePath); 
 
 // ==========================================

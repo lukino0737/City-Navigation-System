@@ -1,4 +1,5 @@
 #pragma once
+#include <QObject>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -6,31 +7,13 @@
 #include "../../api/NavigationAPI.h"
 
 using json = nlohmann::json;
-// 道路边结构体
-struct Edge {
-    int id;
-    int source;     // 起点 ID
-    int target;     // 终点 ID
-    double length;
-    double capacity; 
-    int currentCars; 
-};
 
+std::vector<Node> getNodes(Graph& graph);
+std::vector<Edge> getEdges(Graph& graph);
+class Graph : public QObject {
+    Q_OBJECT
+    Q_DISABLE_COPY(Graph)
 
-inline void to_json(nlohmann::json& j, const Edge& e) {
-    j = nlohmann::json{{"id", e.id}, {"source", e.source}, {"target", e.target}, {"length", e.length}, {"capacity", e.capacity}, {"currentCars", e.currentCars}};
-}
-
-inline void from_json(const nlohmann::json& j, Edge& e) {
-    j.at("id").get_to(e.id);
-    j.at("source").get_to(e.source);
-    j.at("target").get_to(e.target);
-    j.at("length").get_to(e.length);
-    j.at("capacity").get_to(e.capacity);
-    j.at("currentCars").get_to(e.currentCars);
-}
-
-class Graph {
 private:
     std::vector<Node> m_nodes;                     // 节点集合
     std::vector<Edge> m_edges;                     // 边集合
@@ -39,8 +22,8 @@ private:
     std::unordered_map<int, size_t> m_edgeIdToIndex; // 映射
 
 public:
-    Graph();
-    ~Graph();
+    explicit Graph(QObject *parent = nullptr) : QObject(parent) {}
+    ~Graph() override = default;
 
     // 加载和保存地图
     bool load(std::string filePath);

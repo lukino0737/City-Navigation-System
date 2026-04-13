@@ -1,5 +1,0 @@
-module city-navigation-system
-typeinfo City-Navigation-System.qmltypes
-prefer :/qt/qml/city-navigation-system/
-depends QtQuick
-
