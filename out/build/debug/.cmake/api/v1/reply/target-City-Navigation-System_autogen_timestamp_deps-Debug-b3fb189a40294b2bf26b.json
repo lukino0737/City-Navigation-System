@@ -1,0 +1,93 @@
+{
+	"backtrace" : 0,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_dependencies",
+			"_qt_internal_qml_copy_files_to_build_dir",
+			"qt6_add_qml_module",
+			"qt_add_qml_module"
+		],
+		"files" : 
+		[
+			"City-Navigation-System/CMakeLists.txt",
+			"E:/Qt/6.10.2/msvc2022_64/lib/cmake/Qt6Qml/Qt6QmlMacros.cmake"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 51,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 1417,
+				"parent" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 970,
+				"parent" : 2
+			},
+			{
+				"command" : 0,
+				"file" : 1,
+				"line" : 3083,
+				"parent" : 3
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 976,
+				"parent" : 2
+			},
+			{
+				"command" : 0,
+				"file" : 1,
+				"line" : 3083,
+				"parent" : 5
+			}
+		]
+	},
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 0,
+			"id" : "generate_qmlls_build_ini_file::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "City-Navigation-System_copy_qml::@1b1a3dfe7f9e1aa510a9"
+		},
+		{
+			"backtrace" : 6,
+			"id" : "City-Navigation-System_copy_res::@1b1a3dfe7f9e1aa510a9"
+		},
+		{
+			"backtrace" : 0,
+			"id" : "City-Navigation-System_qmlimportscan::@1b1a3dfe7f9e1aa510a9"
+		}
+	],
+	"folder" : 
+	{
+		"name" : "QtInternalTargets"
+	},
+	"id" : "City-Navigation-System_autogen_timestamp_deps::@1b1a3dfe7f9e1aa510a9",
+	"isGeneratorProvided" : true,
+	"name" : "City-Navigation-System_autogen_timestamp_deps",
+	"paths" : 
+	{
+		"build" : "City-Navigation-System",
+		"source" : "City-Navigation-System"
+	},
+	"sources" : [],
+	"type" : "UTILITY"
+}
