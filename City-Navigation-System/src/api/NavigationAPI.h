@@ -34,7 +34,7 @@ struct PathResult {
 };
 
 // ==========================================
-// 序列化逻辑 (移入 nlohmann 命名空间以支持 ADL)
+// 序列化逻辑：用于将Node和Edge对象转换为JSON格式以实现存储
 // ==========================================
 namespace nlohmann {
     template <>
@@ -69,8 +69,16 @@ namespace nlohmann {
 // ==========================================
 // 成员 C 提供的接口 (底层数据加载)
 // ==========================================
+
+// 获取Graph对象中的所有节点和边集合
 std::vector<Node> getNodes(Graph& graph);
 std::vector<Edge> getEdges(Graph& graph);
+// 根据ID获取单个节点或边的信息
+Node getNodeById(Graph& graph, int nodeId);
+Edge getEdgeById(Graph& graph, int edgeId);
+// 获取某节点所有邻边
+std::vector<Edge> getEdgesFromNode(Graph& graph, int nodeId);
+
 
 // 生成地图并存盘
 bool generateAndSaveMap(int nodeCount, std::string filePath);

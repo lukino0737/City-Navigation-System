@@ -10,6 +10,9 @@ using json = nlohmann::json;
 
 std::vector<Node> getNodes(Graph& graph);
 std::vector<Edge> getEdges(Graph& graph);
+std::vector<Edge> getEdgesFromNode(Graph& graph, int nodeId);
+Node getNodeById(Graph& graph, int nodeId);
+Edge getEdgeById(Graph& graph, int edgeId);
 class Graph : public QObject {
     Q_OBJECT
     Q_DISABLE_COPY(Graph)

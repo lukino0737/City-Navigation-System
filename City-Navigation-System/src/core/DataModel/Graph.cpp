@@ -8,6 +8,15 @@ std::vector<Node> getNodes(Graph& graph) {
 std::vector<Edge> getEdges(Graph& graph) {
     return graph.getAllEdges();
 }
+std::vector<Edge> getEdgesFromNode(Graph& graph, int nodeId) {
+    return graph.getEdgesFrom(nodeId);
+}
+Node getNodeById(Graph& graph, int nodeId) {
+    return graph.getNode(nodeId);
+}
+Edge getEdgeById(Graph& graph, int edgeId) {
+    return graph.getEdgeById(edgeId);
+}
 bool Graph::load(std::string filePath) {
     std::ifstream file(filePath);
     if (!file.is_open()) return false;
@@ -51,7 +60,7 @@ Node Graph::getNode(int id) {
 }
 
 std::vector<Edge>& Graph::getEdgesFrom(int nodeId) {
-    return m_adjList[nodeId];
+	return m_adjList[nodeId];
 }
 
 Edge& Graph::getEdgeById(int edgeId) {
