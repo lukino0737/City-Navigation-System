@@ -73,9 +73,7 @@ namespace nlohmann {
 // 获取Graph对象中的所有节点和边集合
 std::vector<Node> getNodes(Graph& graph);
 std::vector<Edge> getEdges(Graph& graph);
-// 根据ID获取单个节点或边的信息
-Node getNodeById(Graph& graph, int nodeId);
-Edge getEdgeById(Graph& graph, int edgeId);
+
 // 获取某节点所有邻边
 std::vector<Edge> getEdgesFromNode(Graph& graph, int nodeId);
 

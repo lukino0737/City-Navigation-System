@@ -135,13 +135,29 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     }
 
     int nodeCount = static_cast<int>(nodes.size());
-    QSGGeometry *pointGeom = new QSGGeometry(QSGGeometry::defaultAttributes_ColoredPoint2D(), nodeCount);
-    pointGeom->setDrawingMode(QSGGeometry::DrawPoints);
+    // 每个节点用一个矩形(2个三角形, 6个顶点)绘制，解决 MacOS Metal 下的 DrawPoints 未定义行为
+    QSGGeometry *pointGeom = new QSGGeometry(QSGGeometry::defaultAttributes_ColoredPoint2D(), nodeCount * 6);
+    pointGeom->setDrawingMode(QSGGeometry::DrawTriangles);
     QSGGeometry::ColoredPoint2D *pointVertices = pointGeom->vertexDataAsColoredPoint2D();
 
+    const float halfSize = 2.0f; // 节点大小的半径，也就是 4x4 像素的方块
+    
     for (int i = 0; i < nodeCount; ++i) {
         QPointF p = mapToScreen(nodes[i].x, nodes[i].y);
-        pointVertices[i].set(p.x(), p.y(), 0, 150, 255, 255);
+        float px = p.x();
+        float py = p.y();
+        unsigned char r = 0, g = 150, b = 255, a = 255;
+        
+        int baseIdx = i * 6;
+        // 第一个三角形 (左上, 右上, 左下)
+        pointVertices[baseIdx + 0].set(px - halfSize, py - halfSize, r, g, b, a);
+        pointVertices[baseIdx + 1].set(px + halfSize, py - halfSize, r, g, b, a);
+        pointVertices[baseIdx + 2].set(px - halfSize, py + halfSize, r, g, b, a);
+        
+        // 第二个三角形 (右上, 右下, 左下)
+        pointVertices[baseIdx + 3].set(px + halfSize, py - halfSize, r, g, b, a);
+        pointVertices[baseIdx + 4].set(px + halfSize, py + halfSize, r, g, b, a);
+        pointVertices[baseIdx + 5].set(px - halfSize, py + halfSize, r, g, b, a);
     }
     pointNode->setGeometry(pointGeom);
     pointNode->markDirty(QSGNode::DirtyGeometry);
