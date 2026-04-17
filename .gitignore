@@ -1,0 +1,48 @@
+# [Build & Temporary Directories]
+out/
+build/
+bin/
+obj/
+*.log
+*.tmp
+*.bak
+
+# [Visual Studio]
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# [CMake]
+CMakeUserPresets.json
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+Makefile
+
+# [Qt / QML]
+*.qmlc
+*.jsc
+*.qm
+*.rcc
+qrc_*.cpp
+
+# [Project Specific Data]
+# 忽略生成的地图数据，仅保留代码和任务书
+*.json
+!CMakePresets.json
+!CMakeUserPresets.json # (可选：如果你希望保留默认预设，但通常推荐忽略 UserPresets)
+
+# [OS Specific]
+Thumbs.db
+.DS_Store
+
+# [Documentation]
+# 排除误入的任务要求与分工.md（如果原文件名乱码）
+任务要求与分工.md
+
+# 忽略 VSCode 本地工作区配置文件
+*.code-workspace
