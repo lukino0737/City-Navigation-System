@@ -20,6 +20,7 @@ public:
 
     Graph* graph() const { return m_graph; }
     void setGraph(Graph* graph);
+    Q_INVOKABLE void refresh();
 
     double zoom() const { return m_zoom; }
     void setZoom(double z);
@@ -51,4 +52,10 @@ private:
     
     void updateRange();
     bool m_rangeDirty = true;
+
+    // 按度数（连边数）降序排列的节点索引列表，第一个元素就是全图最重要的交叉路口
+    // 用于 LOD：缩小时只显示度数大的前 N 个节点
+    std::vector<int> m_nodesByDegree; // 元素是 nodes[] 中的下标
+    bool m_degreeDirty = true;
+    void updateDegreeOrder();
 };

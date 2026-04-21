@@ -31,7 +31,12 @@ public:
     // 加载和保存地图
     bool load(std::string filePath);
     bool save(std::string path);
+    Q_INVOKABLE void regenerateGraph(int nodeCount = 10000);
     
+    signals:
+    void graphRegenerated();
+    
+public:
     // 数据操作接口
     Node getNode(int id);
     std::vector<Edge>& getEdgesFrom(int nodeId);

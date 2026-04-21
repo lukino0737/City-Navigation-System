@@ -48,14 +48,29 @@ Window {
     Rectangle {
         anchors.bottom: parent.bottom
         width: parent.width
-        height: 30
+        height: 60
         color: "#333333"
-        opacity: 0.8
+        opacity: 0.9
 
-        Text {
+        Row {
             anchors.centerIn: parent
-            color: "white"
-            text: "节点数: 10000 | 缩放: " + mapView.zoom.toFixed(2) + " | 拖拽地图以移动，滚轮缩放"
+            spacing: 20
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                color: "white"
+                font.pixelSize: 14
+                text: "节点数: 10000 | 缩放: " + mapView.zoom.toFixed(2) + " | 拖拽地图以移动，滚轮缩放"
+            }
+
+            Button {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "重新生成图并刷新"
+                onClicked: {
+                    globalGraph.regenerateGraph(10000)
+                    mapView.refresh()
+                }
+            }
         }
     }
 }

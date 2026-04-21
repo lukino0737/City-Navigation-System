@@ -1,6 +1,7 @@
 #include "Graph.h"
 #include <fstream>
 #include <iomanip>
+#include "../modules/DataGenerator.h"
 
 std::vector<Node> getNodes(Graph& graph) {
     return graph.getAllNodes();
@@ -37,6 +38,13 @@ bool Graph::load(std::string filePath) {
         addEdge(item["id"], item["source"], item["target"], item["length"], item["capacity"]);
     }
     return true;
+}
+
+void Graph::regenerateGraph(int nodeCount) {
+    if (generateAndSaveMap(nodeCount, "map_data.json")) {
+        load("map_data.json");
+        emit graphRegenerated();
+    }
 }
 
 bool Graph::save(std::string path) {
