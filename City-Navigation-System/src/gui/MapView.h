@@ -13,6 +13,8 @@ class MapView : public QQuickItem {
     // 缩放和平移属性，供 QML 交互使用
     Q_PROPERTY(double zoom READ zoom WRITE setZoom NOTIFY zoomChanged)
     Q_PROPERTY(QPointF offset READ offset WRITE setOffset NOTIFY offsetChanged)
+    // LOD 开关：true = 随缩放动态调整节点数；false = 全量显示
+    Q_PROPERTY(bool lodEnabled READ lodEnabled WRITE setLodEnabled NOTIFY lodEnabledChanged)
 
 public:
     explicit MapView(QQuickItem *parent = nullptr);
@@ -28,10 +30,16 @@ public:
     QPointF offset() const { return m_offset; }
     void setOffset(const QPointF& o);
 
+    bool lodEnabled() const { return m_lodEnabled; }
+    void setLodEnabled(bool v) {
+        if (m_lodEnabled != v) { m_lodEnabled = v; emit lodEnabledChanged(); update(); }
+    }
+
 signals:
     void graphChanged();
     void zoomChanged();
     void offsetChanged();
+    void lodEnabledChanged();
 
 protected:
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
@@ -39,6 +47,7 @@ protected:
 private:
     Graph* m_graph = nullptr;
     double m_zoom = 1.0;
+    bool   m_lodEnabled = true; // 默认开启 LOD
     QPointF m_offset = QPointF(0, 0);
 
     // 辅助函数：将地图坐标转换为 QML 屏幕坐标

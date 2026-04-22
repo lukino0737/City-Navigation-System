@@ -71,6 +71,19 @@ Window {
                     mapView.refresh()
                 }
             }
+
+            // LOD 开关按钮
+            Button {
+                anchors.verticalCenter: parent.verticalCenter
+                // 按钮文字随状态动态更新
+                text: mapView.lodEnabled ? "LOD: 开启 ✓" : "LOD: 关闭"
+                // 高亮样式区分开启/关闭状态
+                palette.button: mapView.lodEnabled ? "#2e7d32" : "#555555"
+                palette.buttonText: "white"
+                onClicked: {
+                    mapView.lodEnabled = !mapView.lodEnabled
+                }
+            }
         }
     }
 }
