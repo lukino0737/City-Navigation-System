@@ -13,3 +13,4 @@ public:
     ~SpatialSearch();
     std::vector<Node> getNearestPoints(double x, double y, int count);
 };
+void initSpatialSearchModule(Graph* graph);
