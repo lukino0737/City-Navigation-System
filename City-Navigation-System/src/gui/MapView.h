@@ -5,6 +5,9 @@
 #include <QSGGeometryNode>
 #include <QSGFlatColorMaterial>
 #include <QSGVertexColorMaterial>
+#include <QVariant>
+#include <QVariantMap>
+#include <QPointF>
 #include "../core/DataModel/Graph.h"
 
 class MapView : public QQuickItem {
@@ -16,6 +19,9 @@ class MapView : public QQuickItem {
     // LOD 开关：true = 随缩放动态调整节点数；false = 全量显示
     Q_PROPERTY(bool lodEnabled READ lodEnabled WRITE setLodEnabled NOTIFY lodEnabledChanged)
 
+    Q_PROPERTY(int hoveredEdgeSource READ hoveredEdgeSource WRITE setHoveredEdgeSource NOTIFY hoveredEdgeChanged)
+    Q_PROPERTY(int hoveredEdgeTarget READ hoveredEdgeTarget WRITE setHoveredEdgeTarget NOTIFY hoveredEdgeChanged)
+
 public:
     explicit MapView(QQuickItem *parent = nullptr);
     ~MapView() override = default;
@@ -23,6 +29,9 @@ public:
     Graph* graph() const { return m_graph; }
     void setGraph(Graph* graph);
     Q_INVOKABLE void refresh();
+
+    Q_INVOKABLE QVariantMap hitTestNode(const QPointF& screenPos, double tolerance = 5.0) const;
+    Q_INVOKABLE QVariantMap hitTestEdge(const QPointF& screenPos, double tolerance = 5.0) const;
 
     double zoom() const { return m_zoom; }
     void setZoom(double z);
@@ -35,11 +44,22 @@ public:
         if (m_lodEnabled != v) { m_lodEnabled = v; emit lodEnabledChanged(); update(); }
     }
 
+    int hoveredEdgeSource() const { return m_hoveredEdgeSource; }
+    void setHoveredEdgeSource(int src) {
+        if (m_hoveredEdgeSource != src) { m_hoveredEdgeSource = src; emit hoveredEdgeChanged(); update(); }
+    }
+
+    int hoveredEdgeTarget() const { return m_hoveredEdgeTarget; }
+    void setHoveredEdgeTarget(int target) {
+        if (m_hoveredEdgeTarget != target) { m_hoveredEdgeTarget = target; emit hoveredEdgeChanged(); update(); }
+    }
+
 signals:
     void graphChanged();
     void zoomChanged();
     void offsetChanged();
     void lodEnabledChanged();
+    void hoveredEdgeChanged();
 
 protected:
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
@@ -50,8 +70,14 @@ private:
     bool   m_lodEnabled = true; // 默认开启 LOD
     QPointF m_offset = QPointF(0, 0);
 
-    // 辅助函数：将地图坐标转换为 QML 屏幕坐标
-    QPointF mapToScreen(double x, double y) const;
+    int m_hoveredEdgeSource = -1;
+    int m_hoveredEdgeTarget = -1;
+
+public:
+    Q_INVOKABLE QPointF mapToScreen(double x, double y) const;
+private:
+
+
     
     // 缓存地图范围，避免每帧重复计算
     struct Range {

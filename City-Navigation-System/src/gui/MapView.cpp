@@ -28,6 +28,78 @@ void MapView::refresh() {
     update();
 }
 
+QVariantMap MapView::hitTestNode(const QPointF& screenPos, double tolerance) const {
+    QVariantMap result;
+    if (!m_graph) return result;
+    
+    double bestDist = tolerance;
+    const Node* bestNode = nullptr;
+
+    const auto& nodes = m_graph->getAllNodes();
+    for (const auto& node : nodes) {
+        QPointF spos = mapToScreen(node.x, node.y);
+        double dist = std::hypot(spos.x() - screenPos.x(), spos.y() - screenPos.y());
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestNode = &node;
+        }
+    }
+
+    if (bestNode) {
+        result["found"] = true;
+        result["id"] = bestNode->Node_id;
+        result["x"] = bestNode->x;
+        result["y"] = bestNode->y;
+    } else {
+        result["found"] = false;
+    }
+    return result;
+}
+
+QVariantMap MapView::hitTestEdge(const QPointF& screenPos, double tolerance) const {
+    QVariantMap result;
+    if (!m_graph) return result;
+    
+    double bestDist = tolerance;
+    const Edge* bestEdge = nullptr;
+
+    const auto& edges = m_graph->getAllEdges();
+    for (const auto& edge : edges) {
+        Node n1 = m_graph->getNode(edge.source);
+        Node n2 = m_graph->getNode(edge.target);
+        
+        QPointF p1 = mapToScreen(n1.x, n1.y);
+        QPointF p2 = mapToScreen(n2.x, n2.y);
+        
+        double l2 = std::pow(p2.x() - p1.x(), 2) + std::pow(p2.y() - p1.y(), 2);
+        double dist;
+        if (l2 == 0.0) {
+            dist = std::hypot(screenPos.x() - p1.x(), screenPos.y() - p1.y());
+        } else {
+            double t = std::clamp(((screenPos.x() - p1.x()) * (p2.x() - p1.x()) + (screenPos.y() - p1.y()) * (p2.y() - p1.y())) / l2, 0.0, 1.0);
+            QPointF proj(p1.x() + t * (p2.x() - p1.x()), p1.y() + t * (p2.y() - p1.y()));
+            dist = std::hypot(screenPos.x() - proj.x(), screenPos.y() - proj.y());
+        }
+
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestEdge = &edge;
+        }
+    }
+
+    if (bestEdge) {
+        result["found"] = true;
+        result["source"] = bestEdge->source;
+        result["target"] = bestEdge->target;
+        result["capacity"] = bestEdge->capacity;
+        result["length"] = bestEdge->length;
+        result["currentCars"] = bestEdge->currentCars;
+    } else {
+        result["found"] = false;
+    }
+    return result;
+}
+
 void MapView::setZoom(double z) {
     if (m_zoom != z) {
         m_zoom = z;
@@ -175,13 +247,18 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     //   - 找到 u 的领主 ownerU，v 的领主 ownerV
     //   - 若 ownerU != ownerV，在它们之间添加虚拟边
     // 用 map<min,map<max,ratio>> 去重，保证每对节点只画一条线。
-    std::unordered_map<int, std::unordered_map<int, double>> vmap;
+    struct EdgeData { double ratio; int capacity; };
+    std::unordered_map<int, std::unordered_map<int, EdgeData>> vmap;
 
-    auto addVirtual = [&](int a, int b, double ratio) {
+    auto addVirtual = [&](int a, int b, double ratio, int capacity) {
         if (a == b) return;
         int lo = std::min(a, b), hi = std::max(a, b);
-        if (!vmap[lo].count(hi))
-            vmap[lo][hi] = ratio;
+        if (!vmap[lo].count(hi)) {
+            vmap[lo][hi] = {ratio, capacity};
+        } else {
+            vmap[lo][hi].capacity = std::max(vmap[lo][hi].capacity, capacity);
+            vmap[lo][hi].ratio = std::max(vmap[lo][hi].ratio, ratio);
+        }
     };
 
     for (const auto& edge : edges) {
@@ -195,96 +272,140 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
 
         double ratio = (edge.capacity > 0)
                        ? static_cast<double>(edge.currentCars) / edge.capacity : 0;
-        addVirtual(ownerSrc, ownerDst, ratio);
+        addVirtual(ownerSrc, ownerDst, ratio, edge.capacity);
     }
 
-    // ── 3. 构建边的渲染节点 ───────────────────────────────────────────────────
-    QSGGeometryNode *edgeNode = nullptr;
-    bool isNewEdge = false;
-    if (root->childCount() > 0) {
-        edgeNode = static_cast<QSGGeometryNode *>(root->childAtIndex(0));
-    } else {
-        edgeNode = new QSGGeometryNode();
+    // ── 3. 清理旧节点 ─────────────────────────────────────────────────────────
+    root->removeAllChildNodes();
+
+    // ── 4. 构建边的渲染节点（ Chunking ）───────────────────────────────────────
+    // 为了防止顶点数超过 16-bit 渲染限制 (65535)，每批最多 10000 条边 (60000 顶点)
+    const int MAX_ITEMS_PER_CHUNK = 10000;
+    
+    // 找出当前 hover 的两端节点，在 LOD 下映射为显示网格中的宏节点
+    int hoverLo = -1, hoverHi = -1;
+    if (m_hoveredEdgeSource != -1 && m_hoveredEdgeTarget != -1) {
+        int u = nodeOwner.count(m_hoveredEdgeSource) ? nodeOwner[m_hoveredEdgeSource] : m_hoveredEdgeSource;
+        int v = nodeOwner.count(m_hoveredEdgeTarget) ? nodeOwner[m_hoveredEdgeTarget] : m_hoveredEdgeTarget;
+        hoverLo = std::min(u, v);
+        hoverHi = std::max(u, v);
+    }
+
+    // 收集所有需要绘制的边数据
+    struct DrawEdge {
+        QPointF p1, p2;
+        double ratio;
+        int capacity;
+        bool isHovered;
+    };
+    std::vector<DrawEdge> drawEdges;
+    for (const auto& outerPair : vmap) {
+        int lo = outerPair.first;
+        Node n1 = m_graph->getNode(lo);
+        QPointF p1 = mapToScreen(n1.x, n1.y);
+        for (const auto& innerPair : outerPair.second) {
+            int hi = innerPair.first;
+            Node n2 = m_graph->getNode(hi);
+            QPointF p2 = mapToScreen(n2.x, n2.y);
+            
+            bool isHovered = (lo == hoverLo && hi == hoverHi);
+            drawEdges.push_back({p1, p2, innerPair.second.ratio, innerPair.second.capacity, isHovered});
+        }
+    }
+
+    int ve = static_cast<int>(drawEdges.size());
+    for (int chunkStart = 0; chunkStart < ve; chunkStart += MAX_ITEMS_PER_CHUNK) {
+        int chunkEnd = std::min(ve, chunkStart + MAX_ITEMS_PER_CHUNK);
+        int chunkSize = chunkEnd - chunkStart;
+
+        QSGGeometryNode *edgeNode = new QSGGeometryNode();
         edgeNode->setMaterial(new QSGVertexColorMaterial());
         edgeNode->setFlag(QSGNode::OwnsMaterial);
         edgeNode->setFlag(QSGNode::OwnsGeometry);
-        isNewEdge = true;
-    }
 
-    // 统计虚拟边总数
-    int ve = 0;
-    for (const auto& p : vmap) ve += static_cast<int>(p.second.size());
+        QSGGeometry *edgeGeom = new QSGGeometry(
+            QSGGeometry::defaultAttributes_ColoredPoint2D(), chunkSize * 6);
+        edgeGeom->setDrawingMode(QSGGeometry::DrawTriangles);
+        auto *eVerts = edgeGeom->vertexDataAsColoredPoint2D();
 
-    QSGGeometry *edgeGeom = new QSGGeometry(
-        QSGGeometry::defaultAttributes_ColoredPoint2D(), ve * 2);
-    edgeGeom->setDrawingMode(QSGGeometry::DrawLines);
-    edgeGeom->setLineWidth(1.0f);
-    auto *eVerts = edgeGeom->vertexDataAsColoredPoint2D();
+        for (int i = 0; i < chunkSize; ++i) {
+            const auto& edge = drawEdges[chunkStart + i];
+            double dx = edge.p2.x() - edge.p1.x();
+            double dy = edge.p2.y() - edge.p1.y();
+            double len = std::hypot(dx, dy);
 
-    int ei = 0;
-    for (const auto& outerPair : vmap) {
-        int lo = outerPair.first;
-        for (const auto& innerPair : outerPair.second) {
-            int hi      = innerPair.first;
-            double ratio = innerPair.second;
+            int base = i * 6;
+            if (len < 1e-5) {
+                for (int j = 0; j < 6; ++j) eVerts[base + j].set(0, 0, 0, 0, 0, 0);
+                continue;
+            }
+            
+            double nx = dy / len;
+            double ny = -dx / len;
 
-            Node n1 = m_graph->getNode(lo);
-            Node n2 = m_graph->getNode(hi);
-            QPointF p1 = mapToScreen(n1.x, n1.y);
-            QPointF p2 = mapToScreen(n2.x, n2.y);
+            // 最低像素宽度设为 2.5
+            double width = std::max(2.5, edge.capacity * pixelsPerUnit * 0.05);
+            if (edge.isHovered) {
+                width *= 2.5; // 加粗
+            }
+
+            double wx = nx * width / 2.0;
+            double wy = ny * width / 2.0;
 
             unsigned char r, g, b;
-            if      (ratio < 0.5) { r = 0;   g = 255; b = 0;   }
-            else if (ratio < 0.9) { r = 255; g = 255; b = 0;   }
-            else                  { r = 255; g = 0;   b = 0;   }
+            if (edge.isHovered) {
+                r = 255; g = 64; b = 129; // 高亮品红
+            } else if (edge.ratio < 0.5) { r = 0;   g = 255; b = 0;   }
+            else if (edge.ratio < 0.9) { r = 255; g = 255; b = 0;   }
+            else                       { r = 255; g = 0;   b = 0;   }
+            unsigned char a = 255;
 
-            eVerts[ei * 2    ].set(p1.x(), p1.y(), r, g, b, 255);
-            eVerts[ei * 2 + 1].set(p2.x(), p2.y(), r, g, b, 255);
-            ++ei;
+            eVerts[base + 0].set(edge.p1.x() - wx, edge.p1.y() - wy, r, g, b, a);
+            eVerts[base + 1].set(edge.p1.x() + wx, edge.p1.y() + wy, r, g, b, a);
+            eVerts[base + 2].set(edge.p2.x() - wx, edge.p2.y() - wy, r, g, b, a);
+            eVerts[base + 3].set(edge.p2.x() - wx, edge.p2.y() - wy, r, g, b, a);
+            eVerts[base + 4].set(edge.p1.x() + wx, edge.p1.y() + wy, r, g, b, a);
+            eVerts[base + 5].set(edge.p2.x() + wx, edge.p2.y() + wy, r, g, b, a);
         }
+        edgeNode->setGeometry(edgeGeom);
+        root->appendChildNode(edgeNode);
     }
-    edgeNode->setGeometry(edgeGeom);
-    edgeNode->markDirty(QSGNode::DirtyGeometry);
-    if (isNewEdge) root->appendChildNode(edgeNode);
 
-    // ── 4. 构建节点的渲染节点（矩形 = 2 三角形 × 6 顶点）────────────────────
-    QSGGeometryNode *pointNode = nullptr;
-    bool isNewPoint = false;
-    if (root->childCount() > 1) {
-        pointNode = static_cast<QSGGeometryNode *>(root->childAtIndex(1));
-    } else {
-        pointNode = new QSGGeometryNode();
+    // ── 5. 构建节点的渲染节点（ Chunking ）────────────────────────────────────
+    float halfSize = static_cast<float>(std::clamp(pixelsPerUnit * 0.4, 1.5, 4.0));
+
+    for (int chunkStart = 0; chunkStart < visibleCount; chunkStart += MAX_ITEMS_PER_CHUNK) {
+        int chunkEnd = std::min(visibleCount, chunkStart + MAX_ITEMS_PER_CHUNK);
+        int chunkSize = chunkEnd - chunkStart;
+
+        QSGGeometryNode *pointNode = new QSGGeometryNode();
         pointNode->setMaterial(new QSGVertexColorMaterial());
         pointNode->setFlag(QSGNode::OwnsMaterial);
         pointNode->setFlag(QSGNode::OwnsGeometry);
-        isNewPoint = true;
+
+        QSGGeometry *pointGeom = new QSGGeometry(
+            QSGGeometry::defaultAttributes_ColoredPoint2D(), chunkSize * 6);
+        pointGeom->setDrawingMode(QSGGeometry::DrawTriangles);
+        auto *pVerts = pointGeom->vertexDataAsColoredPoint2D();
+
+        for (int i = 0; i < chunkSize; ++i) {
+            int idx = m_nodesByDegree[chunkStart + i];
+            QPointF p  = mapToScreen(nodes[idx].x, nodes[idx].y);
+            float px   = static_cast<float>(p.x());
+            float py   = static_cast<float>(p.y());
+            unsigned char r = 0, g = 150, b = 255, a = 255;
+
+            int base = i * 6;
+            pVerts[base + 0].set(px - halfSize, py - halfSize, r, g, b, a);
+            pVerts[base + 1].set(px + halfSize, py - halfSize, r, g, b, a);
+            pVerts[base + 2].set(px - halfSize, py + halfSize, r, g, b, a);
+            pVerts[base + 3].set(px + halfSize, py - halfSize, r, g, b, a);
+            pVerts[base + 4].set(px + halfSize, py + halfSize, r, g, b, a);
+            pVerts[base + 5].set(px - halfSize, py + halfSize, r, g, b, a);
+        }
+        pointNode->setGeometry(pointGeom);
+        root->appendChildNode(pointNode);
     }
-
-    QSGGeometry *pointGeom = new QSGGeometry(
-        QSGGeometry::defaultAttributes_ColoredPoint2D(), visibleCount * 6);
-    pointGeom->setDrawingMode(QSGGeometry::DrawTriangles);
-    auto *pVerts = pointGeom->vertexDataAsColoredPoint2D();
-
-    float halfSize = static_cast<float>(std::clamp(pixelsPerUnit * 0.4, 1.5, 4.0));
-
-    for (int k = 0; k < visibleCount; ++k) {
-        int idx = m_nodesByDegree[k];
-        QPointF p  = mapToScreen(nodes[idx].x, nodes[idx].y);
-        float px   = static_cast<float>(p.x());
-        float py   = static_cast<float>(p.y());
-        unsigned char r = 0, g = 150, b = 255, a = 255;
-
-        int base = k * 6;
-        pVerts[base + 0].set(px - halfSize, py - halfSize, r, g, b, a);
-        pVerts[base + 1].set(px + halfSize, py - halfSize, r, g, b, a);
-        pVerts[base + 2].set(px - halfSize, py + halfSize, r, g, b, a);
-        pVerts[base + 3].set(px + halfSize, py - halfSize, r, g, b, a);
-        pVerts[base + 4].set(px + halfSize, py + halfSize, r, g, b, a);
-        pVerts[base + 5].set(px - halfSize, py + halfSize, r, g, b, a);
-    }
-    pointNode->setGeometry(pointGeom);
-    pointNode->markDirty(QSGNode::DirtyGeometry);
-    if (isNewPoint) root->appendChildNode(pointNode);
 
     return root;
 }
