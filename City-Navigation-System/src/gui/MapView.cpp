@@ -451,7 +451,7 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
         m_geometryDirty = true;
     }
 
-    if (m_geometryDirty || m_topologyDirty) {
+    if (m_geometryDirty || m_topologyDirty || m_styleDirty) {
         m_bakedZoom = m_zoom;
     }
 
@@ -749,7 +749,7 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
         constexpr int NODE_VERTS_PER = 6;
         const int MAX_NODE_ITEMS_PER_CHUNK = std::max(1, 60000 / NODE_VERTS_PER);
 
-        float halfSize = static_cast<float>(std::clamp(pixelsPerUnit * 0.65, 2.4, 6.0));
+        float halfSize = static_cast<float>(std::clamp(pixelsPerUnit * 0.85, 3.2, 8.0));
 
         auto appendNodeLayer = [&](int chunkStart, int chunkSize, float sizeScale) {
             QSGGeometryNode *pointNode = new QSGGeometryNode();

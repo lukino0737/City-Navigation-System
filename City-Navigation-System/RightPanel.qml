@@ -274,7 +274,7 @@ Item {
                 Layout.fillWidth: true
 
                 Text {
-                    text: "Node Glow Color"
+                    text: "Node Color"
                     color: theme.subTextColor
                     font.pixelSize: 12
                     Layout.fillWidth: true
@@ -286,12 +286,12 @@ Item {
                         delegate: Rectangle {
                             width: 24; height: 24; radius: 12
                             color: modelData
-                            border.color: Qt.colorEqual(mapPalette.nodeGlow, modelData) ? theme.textColor : Qt.rgba(1, 1, 1, 0.2)
-                            border.width: Qt.colorEqual(mapPalette.nodeGlow, modelData) ? 2 : 1
+                            border.color: Qt.colorEqual(mapPalette.nodeCore, modelData) ? theme.textColor : Qt.rgba(1, 1, 1, 0.2)
+                            border.width: Qt.colorEqual(mapPalette.nodeCore, modelData) ? 2 : 1
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: mapPalette.nodeGlow = modelData
+                                onClicked: mapPalette.nodeCore = modelData
                             }
                             Behavior on border.color { ColorAnimation { duration: 200 } }
                         }

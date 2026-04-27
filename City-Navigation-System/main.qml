@@ -55,11 +55,11 @@ Window {
             mapPalette.edgeCool = "#00ffff"
             mapPalette.edgeMid = "#7f00ff"
             mapPalette.edgeWarm = "#ff00ff"
-            mapPalette.nodeCore = "#0f0f12"
-            mapPalette.nodeGlow = "#00ffff"
+            mapPalette.nodeCore = "#00ffff"
+            mapPalette.nodeGlow = "#0f0f12"
             mapPalette.edgeGlowAlpha = 0.28
         }
-        
+
         function setLightTheme() {
             bgColor = "#f0f2f5"
             textColor = "#0f172a"
@@ -77,8 +77,8 @@ Window {
             mapPalette.edgeCool = "#0284c7"
             mapPalette.edgeMid = "#8b5cf6"
             mapPalette.edgeWarm = "#e11d48"
-            mapPalette.nodeCore = "#0f172a"
-            mapPalette.nodeGlow = "#0284c7"
+            mapPalette.nodeCore = "#0284c7"
+            mapPalette.nodeGlow = "#0f172a"
             mapPalette.edgeGlowAlpha = 0.15
         }
         
@@ -99,8 +99,8 @@ Window {
             mapPalette.edgeCool = "#22d3ee"
             mapPalette.edgeMid = "#d946ef"
             mapPalette.edgeWarm = "#f43f5e"
-            mapPalette.nodeCore = "#000000"
-            mapPalette.nodeGlow = "#22d3ee"
+            mapPalette.nodeCore = "#22d3ee"
+            mapPalette.nodeGlow = "#000000"
             mapPalette.edgeGlowAlpha = 0.4
         }
     }
@@ -118,8 +118,8 @@ Window {
         property real edgeGlowAlpha: 0.28
         property real edgeGlowWidthScale: 1.9
 
-        property color nodeCore: "#0f0f12"
-        property color nodeGlow: "#00ffff"
+        property color nodeCore: "#00ffff"
+        property color nodeGlow: "#0f0f12"
         property real nodeCoreAlpha: 0.98
         property real nodeGlowAlpha: 0.5
         property real nodeGlowSizeScale: 2.0
