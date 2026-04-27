@@ -4,11 +4,18 @@ import QtQuick.Controls
 Item {
     id: root
     width: 72
-    
+
     property var mapView: null
     property Item blurTarget: null
     signal settingsClicked()
-    
+
+    // 阻止鼠标事件穿透到下方的地图
+    MouseArea {
+        anchors.fill: parent
+        hoverEnabled: true
+        preventStealing: true
+    }
+
     GlassPanel {
         anchors.fill: parent
         radius: 20

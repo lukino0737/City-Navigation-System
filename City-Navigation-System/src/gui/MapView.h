@@ -9,6 +9,8 @@
 #include <QVariantMap>
 #include <QPointF>
 #include <QColor>
+#include <QTimer>
+#include <QElapsedTimer>
 #include "../core/DataModel/Graph.h"
 
 #include <QSGTransformNode>
@@ -41,6 +43,7 @@ class MapView : public QQuickItem {
     Q_PROPERTY(double nodeCoreAlpha READ nodeCoreAlpha WRITE setNodeCoreAlpha NOTIFY styleChanged)
     Q_PROPERTY(double nodeGlowAlpha READ nodeGlowAlpha WRITE setNodeGlowAlpha NOTIFY styleChanged)
     Q_PROPERTY(double nodeGlowSizeScale READ nodeGlowSizeScale WRITE setNodeGlowSizeScale NOTIFY styleChanged)
+    Q_PROPERTY(bool momentumActive READ momentumActive NOTIFY momentumActiveChanged)
 
 public:
     explicit MapView(QQuickItem *parent = nullptr);
@@ -52,6 +55,12 @@ public:
 
     Q_INVOKABLE QVariantMap hitTestNode(const QPointF& screenPos, double tolerance = 5.0) const;
     Q_INVOKABLE QVariantMap hitTestEdge(const QPointF& screenPos, double tolerance = 5.0) const;
+
+    Q_INVOKABLE void addZoomVelocity(double delta);
+    void reclampOffset();
+    void applyOffsetBounds(QPointF& p) const;
+
+    bool momentumActive() const { return m_momentumActive; }
 
     double zoom() const { return m_zoom; }
     void setZoom(double z);
@@ -67,7 +76,12 @@ public:
     double lodIntensity() const { return m_lodIntensity; }
     void setLodIntensity(double v) {
         double clamped = std::clamp(v, 0.2, 5.0);
-        if (!qFuzzyCompare(m_lodIntensity, clamped)) { m_lodIntensity = clamped; emit lodIntensityChanged(); update(); }
+        if (!qFuzzyCompare(m_lodIntensity, clamped)) {
+            m_lodIntensity = clamped;
+            m_bakedLodZoom = -1.0; // force LOD recalculation on next render
+            emit lodIntensityChanged();
+            update();
+        }
     }
 
     int hoveredEdgeSource() const { return m_hoveredEdgeSource; }
@@ -153,6 +167,7 @@ signals:
     void lodIntensityChanged();
     void hoveredEdgeChanged();
     void styleChanged();
+    void momentumActiveChanged();
 
 protected:
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
@@ -196,6 +211,7 @@ private:
     std::vector<LogicalEdge> m_cachedLogicalEdges;
     int m_cachedVisibleCount = -1;
     double m_bakedZoom = -1.0;
+    double m_bakedLodZoom = -1.0; // zoom where LOD was last recalculated
     double m_cachedWidth = -1.0;
     double m_cachedHeight = -1.0;
     int m_cachedHoverLo = -1;
@@ -203,7 +219,22 @@ private:
     bool m_topologyDirty = true;
     bool m_geometryDirty = true;
     bool m_styleDirty = true;
-    
+
+    // Grid caching: skip rebuild when zoom/offset change is below threshold
+    double m_cachedGridSpacing = -1.0;
+    double m_cachedGridOriginX = 0.0;
+    double m_cachedGridOriginY = 0.0;
+
+    // Momentum zoom: velocity accumulated from wheel events, decayed each tick
+    double m_zoomVelocity = 0.0;
+    bool m_momentumActive = false;
+    QTimer* m_momentumTimer = nullptr;
+    qint64 m_lastMomentumMs = 0;
+
+private slots:
+    void onMomentumTick();
+
+private:
     // 缓存地图范围，避免每帧重复计算
     struct Range {
         double minX = 0, maxX = 1;

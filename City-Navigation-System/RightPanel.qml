@@ -5,17 +5,24 @@ import QtQuick.Layouts
 Item {
     id: root
     width: 340
-    
+
     property bool isCollapsed: false
     property var mapView: null
     property Item blurTarget: null
     property bool isGenerating: false
     signal regenerateClicked()
-    
+
     Behavior on x { NumberAnimation { duration: 450; easing.type: Easing.OutQuint } }
-    
+
     x: isCollapsed ? parent.width : parent.width - width - 24
-    
+
+    // 阻止鼠标事件穿透到下方的地图
+    MouseArea {
+        anchors.fill: parent
+        hoverEnabled: true
+        preventStealing: true
+    }
+
     GlassPanel {
         id: mainGlass
         anchors.fill: parent
@@ -279,8 +286,8 @@ Item {
                         delegate: Rectangle {
                             width: 24; height: 24; radius: 12
                             color: modelData
-                            border.color: mapPalette.nodeGlow === modelData ? theme.textColor : Qt.rgba(1, 1, 1, 0.2)
-                            border.width: mapPalette.nodeGlow === modelData ? 2 : 1
+                            border.color: Qt.colorEqual(mapPalette.nodeGlow, modelData) ? theme.textColor : Qt.rgba(1, 1, 1, 0.2)
+                            border.width: Qt.colorEqual(mapPalette.nodeGlow, modelData) ? 2 : 1
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
@@ -305,16 +312,16 @@ Item {
                 Row {
                     spacing: 12
                     Repeater {
-                        model: ["#7f00ff", "#8b5cf6", "#d946ef", "#f59e0b", "#3b82f6"]
+                        model: ["#00ffff", "#0284c7", "#22d3ee", "#10b981", "#3b82f6"]
                         delegate: Rectangle {
                             width: 24; height: 24; radius: 12
                             color: modelData
-                            border.color: mapPalette.edgeMid === modelData ? theme.textColor : Qt.rgba(1, 1, 1, 0.2)
-                            border.width: mapPalette.edgeMid === modelData ? 2 : 1
+                            border.color: Qt.colorEqual(mapPalette.edgeCool, modelData) ? theme.textColor : Qt.rgba(1, 1, 1, 0.2)
+                            border.width: Qt.colorEqual(mapPalette.edgeCool, modelData) ? 2 : 1
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: mapPalette.edgeMid = modelData
+                                onClicked: mapPalette.edgeCool = modelData
                             }
                             Behavior on border.color { ColorAnimation { duration: 200 } }
                         }

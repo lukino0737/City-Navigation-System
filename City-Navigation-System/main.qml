@@ -135,27 +135,10 @@ Window {
             color: theme.bgColor
         }
 
-        Item {
-            id: mapLogic
-            // `targetZoom` stores the instant logical destination to safely accumulate consecutive multi-scroll inputs
-            property real targetZoom: 0.9
-            
-            // `visualZoom` trails the `targetZoom` smoothly for rendering
-            property real visualZoom: targetZoom
-            
-            Behavior on visualZoom {
-                NumberAnimation {
-                    duration: 400
-                    easing.type: Easing.OutQuart
-                }
-            }
-        }
-
         MapView {
             id: mapView
             anchors.fill: parent
             graph: globalGraph
-            zoom: mapLogic.visualZoom
             offset: Qt.point(0.05, 0.05)
             edgeCoolColor: mapPalette.edgeCool
             edgeMidColor: mapPalette.edgeMid
@@ -236,14 +219,7 @@ Window {
                 }
 
                 onWheel: (wheel) => {
-                    // Update target zoom via a multiplier instead of linear addition
-                    // This creates a much more natural speed scaling. Calculate proportional momentum:
-                    let factor = Math.pow(1.15, wheel.angleDelta.y / 120.0)
-                    mapLogic.targetZoom = Math.max(0.1, Math.min(50.0, mapLogic.targetZoom * factor))
-                    
-                    if (!pressed) {
-                        updateHoverState(wheel.x, wheel.y)
-                    }
+                    mapView.addZoomVelocity(wheel.angleDelta.y / 120.0)
                 }
             }
         }
@@ -253,8 +229,12 @@ Window {
             anchors.fill: mapView
             blurEnabled: true
             blurMax: 64
-            blur: 1.0
+            blur: mapView.momentumActive ? 0.25 : 1.0
             opacity: 0.6
+
+            Behavior on blur {
+                NumberAnimation { duration: 250; easing.type: Easing.OutQuad }
+            }
         }
 
         // Invisible blocker to prevent map interaction during load

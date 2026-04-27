@@ -7,6 +7,7 @@
 #include <QImage>
 #include <QPainter>
 #include <QRadialGradient>
+#include <QDateTime>
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
@@ -16,6 +17,11 @@
 
 MapView::MapView(QQuickItem *parent) : QQuickItem(parent) {
     setFlag(ItemHasContents, true);
+    m_zoom = 0.9;
+    m_momentumTimer = new QTimer(this);
+    m_momentumTimer->setTimerType(Qt::PreciseTimer);
+    m_momentumTimer->setInterval(16);  // ~60fps, 原 50ms = 20fps 导致视觉跳帧
+    connect(m_momentumTimer, &QTimer::timeout, this, &MapView::onMomentumTick);
 }
 
 MapView::~MapView() {
@@ -150,11 +156,86 @@ void MapView::setZoom(double z) {
 }
 
 void MapView::setOffset(const QPointF& o) {
-    if (m_offset != o) {
-        m_offset = o;
+    updateRange();
+    QPointF clamped = o;
+    applyOffsetBounds(clamped);
+    if (m_offset != clamped) {
+        m_offset = clamped;
         emit offsetChanged();
         update();
     }
+}
+
+void MapView::reclampOffset() {
+    updateRange();
+    QPointF clamped = m_offset;
+    applyOffsetBounds(clamped);
+    if (m_offset != clamped) {
+        m_offset = clamped;
+        emit offsetChanged();
+    }
+}
+
+void MapView::applyOffsetBounds(QPointF& p) const {
+    double worldW = m_range.maxX - m_range.minX;
+    double worldH = m_range.maxY - m_range.minY;
+    if (worldW <= 0 || worldH <= 0 || width() <= 0 || height() <= 0) return;
+
+    double baseScale = std::min(width() / worldW, height() / worldH);
+    double normX = worldW * baseScale / width();
+    double normY = worldH * baseScale / height();
+
+    p.setX(std::clamp(p.x(), normX * (0.5 - m_zoom), normX * 0.5));
+    p.setY(std::clamp(p.y(), normY * (0.5 - m_zoom), normY * 0.5));
+}
+
+void MapView::addZoomVelocity(double delta) {
+    double instant = std::pow(1.04, delta);
+    m_zoom = std::clamp(m_zoom * instant, 0.1, 50.0);
+    emit zoomChanged();
+    reclampOffset();
+
+    m_zoomVelocity += delta * 0.028;
+    m_zoomVelocity = std::clamp(m_zoomVelocity, -0.22, 0.22);
+
+    if (!m_momentumActive) {
+        m_momentumActive = true;
+        emit momentumActiveChanged();
+    }
+    m_lastMomentumMs = QDateTime::currentMSecsSinceEpoch();
+
+    if (!m_momentumTimer->isActive())
+        m_momentumTimer->start();
+
+    update();
+}
+
+void MapView::onMomentumTick() {
+    if (!m_momentumActive) {
+        m_momentumTimer->stop();
+        return;
+    }
+
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    double dt = std::max(0.0, static_cast<double>(now - m_lastMomentumMs) / 1000.0);
+    m_lastMomentumMs = now;
+
+    if (dt > 0.0 && dt < 0.5) {
+        m_zoom *= (1.0 + m_zoomVelocity * dt * 60.0);
+        m_zoom = std::clamp(m_zoom, 0.1, 50.0);
+        reclampOffset();
+        m_zoomVelocity *= std::exp(-8.66 * dt);
+
+        if (std::abs(m_zoomVelocity) < 0.0003) {
+            m_momentumActive = false;
+            m_zoomVelocity = 0.0;
+            m_momentumTimer->stop();
+            emit momentumActiveChanged();
+        }
+    }
+
+    emit zoomChanged();
+    update();
 }
 
 void MapView::updateRange() {
@@ -279,8 +360,7 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     double startX = (width()  - worldW * baseScale) / 2.0;
     double startY = (height() - worldH * baseScale) / 2.0;
 
-    // --- Rebuild Grid ---
-    // Calculate how the world moves in screen coordinates to lock the grid seamlessly
+    // --- Rebuild Grid (only when parameters change meaningfully) ---
     double trueSpacing = 100.0 * baseScale * m_zoom;
     if (trueSpacing > 0) {
         while (trueSpacing > 160.0) trueSpacing /= 2.0;
@@ -291,6 +371,17 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
 
     double originX = startX + m_offset.x() * width() - m_range.minX * baseScale * m_zoom;
     double originY = startY + m_offset.y() * height() - m_range.minY * baseScale * m_zoom;
+
+    bool gridChanged =
+        m_cachedWidth != width() || m_cachedHeight != height() ||
+        std::abs(m_cachedGridSpacing - trueSpacing) > 0.05 * trueSpacing ||
+        std::abs(m_cachedGridOriginX - originX) > trueSpacing * 0.15 ||
+        std::abs(m_cachedGridOriginY - originY) > trueSpacing * 0.15;
+
+    if (gridChanged) {
+        m_cachedGridSpacing = trueSpacing;
+        m_cachedGridOriginX = originX;
+        m_cachedGridOriginY = originY;
 
     double beginX = std::fmod(originX, trueSpacing);
     if (beginX < 0) beginX += trueSpacing;
@@ -318,6 +409,7 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
         gridVertices[gIdx++].set(width(), y);
     }
     gridNode->markDirty(QSGNode::DirtyGeometry);
+    } // gridChanged
 
     if (m_cachedWidth != width() || m_cachedHeight != height()) {
         m_cachedWidth = width();
@@ -326,24 +418,32 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
         m_topologyDirty = true;
     }
 
-    if (m_bakedZoom < 0.0 || m_zoom / m_bakedZoom < 0.7 || m_zoom / m_bakedZoom > 1.4) {
+    if (m_bakedZoom < 0.0 || m_zoom / m_bakedZoom < 0.55 || m_zoom / m_bakedZoom > 1.7) {
         m_geometryDirty = true;
     }
 
-    int visibleCount = totalNodeCount; // 默认全量
+    int visibleCount = totalNodeCount;
     if (m_lodEnabled) {
-        const int MIN_VISIBLE = 200;
-        int targetVisible = static_cast<int>(
-            std::clamp(MIN_VISIBLE * std::pow(pixelsPerUnit / baseScale, m_lodIntensity)
-                       * static_cast<double>(totalNodeCount) / 300.0,
-                       static_cast<double>(MIN_VISIBLE),
-                       static_cast<double>(totalNodeCount)));
-        visibleCount = std::min(targetVisible, static_cast<int>(m_nodesByDegree.size()));
-    }
+        double lodRatio = (m_bakedLodZoom > 0.0) ? (m_zoom / m_bakedLodZoom) : 999.0;
+        if (lodRatio < 0.6 || lodRatio > 1.6 || m_cachedVisibleCount < 0) {
+            const int MIN_VISIBLE = 200;
+            // Normalize zoom to [0, 1] so that lodIntensity always controls
+            // the reduction consistently: Soft → more nodes, Aggressive → fewer nodes,
+            // at every zoom level (zoom ∈ [0.1, 50.0], log scale for natural feel).
+            double zoomNorm = std::clamp(
+                std::log(m_zoom / 0.1) / std::log(50.0 / 0.1), 0.0, 1.0);
+            int targetVisible = static_cast<int>(
+                MIN_VISIBLE + (totalNodeCount - MIN_VISIBLE) * std::pow(zoomNorm, m_lodIntensity));
+            int newVisible = std::min(targetVisible, static_cast<int>(m_nodesByDegree.size()));
 
-    if (m_cachedVisibleCount == -1 || std::abs(m_cachedVisibleCount - visibleCount) > std::max(50, m_cachedVisibleCount / 10)) {
-        m_cachedVisibleCount = visibleCount;
-        m_topologyDirty = true;
+            m_bakedLodZoom = m_zoom;
+
+            if (std::abs(m_cachedVisibleCount - newVisible) > std::max(100, m_cachedVisibleCount / 5)) {
+                m_cachedVisibleCount = newVisible;
+                m_topologyDirty = true;
+            }
+        }
+        visibleCount = m_cachedVisibleCount;
     }
 
     if (m_hoveredEdgeSource != m_cachedHoverLo || m_hoveredEdgeTarget != m_cachedHoverHi) {
