@@ -45,6 +45,13 @@ class MapView : public QQuickItem {
     Q_PROPERTY(double nodeGlowSizeScale READ nodeGlowSizeScale WRITE setNodeGlowSizeScale NOTIFY styleChanged)
     Q_PROPERTY(bool momentumActive READ momentumActive NOTIFY momentumActiveChanged)
 
+    // Selection state
+    Q_PROPERTY(int selectedNodeId READ selectedNodeId NOTIFY selectionChanged)
+    Q_PROPERTY(int selectedEdgeSource READ selectedEdgeSource NOTIFY selectionChanged)
+    Q_PROPERTY(int selectedEdgeTarget READ selectedEdgeTarget NOTIFY selectionChanged)
+    Q_PROPERTY(QString selectionMode READ selectionMode NOTIFY selectionChanged)
+    Q_PROPERTY(QColor selectionAccent READ selectionAccent WRITE setSelectionAccent NOTIFY styleChanged)
+
 public:
     explicit MapView(QQuickItem *parent = nullptr);
     ~MapView() override;
@@ -56,11 +63,26 @@ public:
     Q_INVOKABLE QVariantMap hitTestNode(const QPointF& screenPos, double tolerance = 5.0) const;
     Q_INVOKABLE QVariantMap hitTestEdge(const QPointF& screenPos, double tolerance = 5.0) const;
 
+    Q_INVOKABLE QVariantMap selectNode(int nodeId);
+    Q_INVOKABLE QVariantMap selectEdge(int source, int target);
+    Q_INVOKABLE void clearSelection();
+
     Q_INVOKABLE void addZoomVelocity(double delta);
     void reclampOffset();
     void applyOffsetBounds(QPointF& p) const;
 
     bool momentumActive() const { return m_momentumActive; }
+
+    int selectedNodeId() const { return m_selectedNodeId; }
+    int selectedEdgeSource() const { return m_selectedEdgeSource; }
+    int selectedEdgeTarget() const { return m_selectedEdgeTarget; }
+    QString selectionMode() const {
+        if (m_selectedNodeId != -1) return QStringLiteral("node");
+        if (m_selectedEdgeSource != -1) return QStringLiteral("edge");
+        return QStringLiteral("none");
+    }
+    QColor selectionAccent() const { return m_selectionAccent; }
+    void setSelectionAccent(const QColor& c) { m_selectionAccent = c; }
 
     double zoom() const { return m_zoom; }
     void setZoom(double z);
@@ -168,6 +190,8 @@ signals:
     void hoveredEdgeChanged();
     void styleChanged();
     void momentumActiveChanged();
+    void selectionChanged();
+    void selectionInfoReady(QVariantMap info);
 
 protected:
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
@@ -233,6 +257,7 @@ private:
 
 private slots:
     void onMomentumTick();
+    void onAnimTick();
 
 private:
     // 缓存地图范围，避免每帧重复计算
@@ -249,4 +274,22 @@ private:
     std::vector<int> m_nodesByDegree; // 元素是 nodes[] 中的下标
     bool m_degreeDirty = true;
     void updateDegreeOrder();
+
+    // Selection state
+    int m_selectedNodeId = -1;
+    int m_selectedEdgeSource = -1;
+    int m_selectedEdgeTarget = -1;
+    bool m_selectionDirty = false;
+    QColor m_selectionAccent = QColor(59, 130, 246);
+
+    // Edge-click endpoint highlight
+    std::unordered_set<int> m_highlightedNodeIds;
+    double m_nodeHighlightProgress = 0.0;
+    QTimer* m_animTimer = nullptr;
+    qint64 m_animStartMs = 0;
+
+    // Overlay child tracking
+    int m_baseChildCount = 0;
+
+    void rebuildSelectionOverlay(QSGTransformNode* mapNode, float halfSize, double pixelsPerUnit);
 };

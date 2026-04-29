@@ -59,6 +59,8 @@ if(QT_VERSION VERSION_GREATER_EQUAL 6.2)
             Sidebar.qml
             RightPanel.qml
             SettingsDialog.qml
+            DetailPanel.qml
+            ViewSwitcher.qml
     )
 endif()
 

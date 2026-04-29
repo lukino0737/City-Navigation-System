@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Effects
 
 Item {
     id: root
@@ -69,7 +70,7 @@ Item {
                 ComboBox {
                     id: themeCombo
                     model: ["Deep Space", "Alabaster", "Neon Obsidian"]
-                    Layout.preferredWidth: 160
+                    Layout.preferredWidth: 180
                     font.pixelSize: 13
                     onCurrentIndexChanged: {
                         if (currentIndex === 0) theme.setDarkTheme()
@@ -77,19 +78,102 @@ Item {
                         else if (currentIndex === 2) theme.setCyberTheme()
                     }
                     
+                    delegate: ItemDelegate {
+                        width: themeCombo.width - 8
+                        x: 4
+                        height: 40
+                        contentItem: Text {
+                            text: modelData
+                            color: highlighted ? theme.accentColor : theme.textColor
+                            font.pixelSize: 13
+                            font.weight: highlighted ? Font.Medium : Font.Normal
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideRight
+                        }
+                        background: Rectangle {
+                            radius: 8
+                            color: highlighted ? theme.activePill : "transparent"
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+                        highlighted: themeCombo.highlightedIndex === index
+                    }
+
+                    indicator: Canvas {
+                        id: canvas
+                        x: themeCombo.width - width - 12
+                        y: (themeCombo.height - height) / 2
+                        width: 10
+                        height: 6
+                        contextType: "2d"
+                        onPaint: {
+                            var ctx = getContext("2d");
+                            ctx.reset();
+                            ctx.moveTo(0, 0);
+                            ctx.lineTo(width, 0);
+                            ctx.lineTo(width / 2, height);
+                            ctx.closePath();
+                            ctx.fillStyle = theme.subTextColor;
+                            ctx.fill();
+                        }
+                    }
+
                     background: Rectangle {
+                        implicitHeight: 40
                         color: theme.buttonBg
-                        border.color: theme.panelBorder
+                        border.color: themeCombo.visualFocus ? theme.accentColor : theme.panelBorder
                         border.width: 1
                         radius: 10
+                        Behavior on border.color { ColorAnimation { duration: 200 } }
                     }
+
                     contentItem: Text {
                         text: themeCombo.displayText
                         font: themeCombo.font
                         color: theme.textColor
                         verticalAlignment: Text.AlignVCenter
                         elide: Text.ElideRight
-                        leftPadding: 12
+                        leftPadding: 16
+                        rightPadding: 32
+                    }
+
+                    popup: Popup {
+                        y: themeCombo.height + 6
+                        width: themeCombo.width
+                        implicitHeight: contentItem.implicitHeight + 16
+                        padding: 8
+
+                        contentItem: ListView {
+                            clip: true
+                            implicitHeight: contentHeight
+                            model: themeCombo.popup.visible ? themeCombo.delegateModel : null
+                            currentIndex: themeCombo.highlightedIndex
+                            ScrollIndicator.vertical: ScrollIndicator { }
+                        }
+
+                        background: Rectangle {
+                            color: Qt.rgba(theme.panelColor.r, theme.panelColor.g, theme.panelColor.b, 0.95)
+                            border.color: theme.panelBorder
+                            border.width: 1
+                            radius: 16
+                            
+                            // Simple drop shadow effect
+                            layer.enabled: true
+                            layer.effect: MultiEffect {
+                                shadowEnabled: true
+                                shadowBlur: 0.8
+                                shadowColor: Qt.rgba(0, 0, 0, 0.4)
+                                shadowVerticalOffset: 8
+                            }
+                        }
+                        
+                        enter: Transition {
+                            NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 200; easing.type: Easing.OutCubic }
+                            NumberAnimation { property: "scale"; from: 0.95; to: 1.0; duration: 200; easing.type: Easing.OutBack }
+                        }
+                        exit: Transition {
+                            NumberAnimation { property: "opacity"; from: 1.0; to: 0.0; duration: 150; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "scale"; from: 1.0; to: 0.95; duration: 150; easing.type: Easing.InCubic }
+                        }
                     }
                 }
             }

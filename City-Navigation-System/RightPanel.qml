@@ -10,17 +10,29 @@ Item {
     property var mapView: null
     property Item blurTarget: null
     property bool isGenerating: false
+    property bool active: true
     signal regenerateClicked()
 
     Behavior on x { NumberAnimation { duration: 450; easing.type: Easing.OutQuint } }
 
-    x: isCollapsed ? parent.width : parent.width - width - 24
+    // Sliding logic + Offset when inactive
+    x: {
+        let baseX = isCollapsed ? parent.width : parent.width - width - 24
+        return active ? baseX : baseX - 40
+    }
+    
+    opacity: active ? 1.0 : 0.0
+    scale: active ? 1.0 : 0.95
+    
+    Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+    Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutBack } }
 
     // 阻止鼠标事件穿透到下方的地图
     MouseArea {
         anchors.fill: parent
         hoverEnabled: true
         preventStealing: true
+        enabled: root.active
     }
 
     GlassPanel {
@@ -37,6 +49,7 @@ Item {
         anchors.right: parent.left
         anchors.rightMargin: 8
         anchors.verticalCenter: parent.verticalCenter
+        visible: root.active
         
         GlassPanel {
             anchors.fill: parent
@@ -170,7 +183,6 @@ Item {
                     Item { Layout.fillWidth: true }
                     Text {
                         id: lodValueLabel
-                        // Map slider value (0–100) to label: Soft / Balanced / Aggressive
                         text: {
                             if (!mapView) return "–"
                             let v = mapView.lodIntensity
@@ -225,7 +237,7 @@ Item {
                             if (mapView) mapView.lodIntensity = value
                         }
 
-                        background: Item {}   // invisible — drawn above manually
+                        background: Item {}   
 
                         handle: Rectangle {
                             x: lodSlider.visualPosition * (lodSlider.width - width)
@@ -237,7 +249,6 @@ Item {
                             border.color: Qt.rgba(theme.accentColor.r, theme.accentColor.g, theme.accentColor.b, 0.4)
                             border.width: 3
 
-                            // Glow ring
                             Rectangle {
                                 anchors.centerIn: parent
                                 width: parent.width + 8
@@ -256,7 +267,6 @@ Item {
                     }
                 }
 
-                // Tick labels: Soft | Balanced | Aggressive
                 RowLayout {
                     Layout.fillWidth: true
                     Text { text: "Soft";       font.pixelSize: 10; color: theme.subTextColor; opacity: 0.6 }
@@ -329,9 +339,6 @@ Item {
                 }
             }
         }
-
         Item { Layout.fillHeight: true }
-        }
-        }
-
-
+    }
+}

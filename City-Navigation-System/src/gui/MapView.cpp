@@ -22,6 +22,11 @@ MapView::MapView(QQuickItem *parent) : QQuickItem(parent) {
     m_momentumTimer->setTimerType(Qt::PreciseTimer);
     m_momentumTimer->setInterval(16);  // ~60fps, 原 50ms = 20fps 导致视觉跳帧
     connect(m_momentumTimer, &QTimer::timeout, this, &MapView::onMomentumTick);
+
+    m_animTimer = new QTimer(this);
+    m_animTimer->setTimerType(Qt::PreciseTimer);
+    m_animTimer->setInterval(16);
+    connect(m_animTimer, &QTimer::timeout, this, &MapView::onAnimTick);
 }
 
 MapView::~MapView() {
@@ -145,6 +150,91 @@ QVariantMap MapView::hitTestEdge(const QPointF& screenPos, double tolerance) con
         result["found"] = false;
     }
     return result;
+}
+
+QVariantMap MapView::selectNode(int nodeId) {
+    QVariantMap info;
+    if (!m_graph) return info;
+
+    m_selectedNodeId = nodeId;
+    m_selectedEdgeSource = -1;
+    m_selectedEdgeTarget = -1;
+    m_highlightedNodeIds.clear();
+    m_selectionDirty = true;
+    m_geometryDirty = true;
+
+    Node n = m_graph->getNode(nodeId);
+    info["type"] = "node";
+    info["id"] = n.Node_id;
+    info["x"] = n.x;
+    info["y"] = n.y;
+    info["degree"] = static_cast<int>(m_graph->getEdgesFrom(nodeId).size());
+
+    emit selectionChanged();
+    emit selectionInfoReady(info);
+    update();
+    return info;
+}
+
+QVariantMap MapView::selectEdge(int source, int target) {
+    QVariantMap info;
+    if (!m_graph) return info;
+
+    m_selectedNodeId = -1;
+    m_selectedEdgeSource = source;
+    m_selectedEdgeTarget = target;
+    m_selectionDirty = true;
+    m_geometryDirty = true;
+
+    m_highlightedNodeIds.clear();
+    m_highlightedNodeIds.insert(source);
+    m_highlightedNodeIds.insert(target);
+    m_nodeHighlightProgress = 0.0;
+
+    m_animStartMs = QDateTime::currentMSecsSinceEpoch();
+    m_animTimer->start();
+
+    Node n1 = m_graph->getNode(source);
+    Node n2 = m_graph->getNode(target);
+    info["type"] = "edge";
+    info["source"] = source;
+    info["target"] = target;
+    info["sourceX"] = n1.x;
+    info["sourceY"] = n1.y;
+    info["targetX"] = n2.x;
+    info["targetY"] = n2.y;
+
+    emit selectionChanged();
+    emit selectionInfoReady(info);
+    update();
+    return info;
+}
+
+void MapView::clearSelection() {
+    if (m_selectedNodeId == -1 && m_selectedEdgeSource == -1) return;
+    m_selectedNodeId = -1;
+    m_selectedEdgeSource = -1;
+    m_selectedEdgeTarget = -1;
+    m_selectionDirty = true;
+    m_geometryDirty = true;
+    m_highlightedNodeIds.clear();
+    m_nodeHighlightProgress = 0.0;
+    m_animTimer->stop();
+    emit selectionChanged();
+    update();
+}
+
+void MapView::onAnimTick() {
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    double elapsed = (now - m_animStartMs) / 1000.0;
+
+    m_nodeHighlightProgress = std::min(elapsed / 0.45, 1.0);
+
+    m_selectionDirty = true;
+    update();
+
+    if (m_nodeHighlightProgress >= 1.0)
+        m_animTimer->stop();
 }
 
 void MapView::setZoom(double z) {
@@ -356,6 +446,7 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
 
     double baseScale     = std::min(width() / worldW, height() / worldH);
     double pixelsPerUnit = baseScale * m_zoom;
+    float halfSize = static_cast<float>(std::clamp(pixelsPerUnit * 0.85, 3.2, 8.0));
 
     double startX = (width()  - worldW * baseScale) / 2.0;
     double startY = (height() - worldH * baseScale) / 2.0;
@@ -467,7 +558,14 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     matrix.scale(s, s);
     mapNode->setMatrix(matrix);
 
-    if (!m_topologyDirty && !m_geometryDirty && !m_styleDirty) {
+    // Selection-only dirty → rebuild overlay, skip base geometry (animation frames)
+    if (!m_topologyDirty && !m_geometryDirty && !m_styleDirty && m_selectionDirty) {
+        rebuildSelectionOverlay(mapNode, halfSize, pixelsPerUnit);
+        m_selectionDirty = false;
+        return container;
+    }
+
+    if (!m_topologyDirty && !m_geometryDirty && !m_styleDirty && !m_selectionDirty) {
         return container; // 只有 offset 改变或轻微缩放时，直接返回，实现 0 成本高帧率
     }
 
@@ -487,6 +585,12 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
             int vid = nodes[idx].Node_id;
             nodeOwner[vid] = vid;
             bfsQ.push(vid);
+        }
+        // Force-include selected node in BFS seeds (even if below LOD threshold)
+        if (m_selectedNodeId != -1 && m_selectedNodeId <= maxId
+            && nodeOwner[m_selectedNodeId] == -1) {
+            nodeOwner[m_selectedNodeId] = m_selectedNodeId;
+            bfsQ.push(m_selectedNodeId);
         }
 
         while (!bfsQ.empty()) {
@@ -578,6 +682,7 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
             int capacity;
             bool isHovered;
             double baseWidth;
+            int u, v;
         };
 
         auto baseEdgeWidth = [&](int capacity) {
@@ -600,7 +705,7 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
                              (logEdge.v == hoverLoMapping && logEdge.u == hoverHiMapping);
                              
             double baseWidth = baseEdgeWidth(logEdge.capacity);
-            drawEdges.push_back({p1, p2, logEdge.ratio, logEdge.capacity, isHovered, baseWidth});
+            drawEdges.push_back({p1, p2, logEdge.ratio, logEdge.capacity, isHovered, baseWidth, logEdge.u, logEdge.v});
         }
 
         std::sort(drawEdges.begin(), drawEdges.end(), [](const DrawEdge& a, const DrawEdge& b) {
@@ -679,6 +784,19 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
                 if (glowTint > 0.0) baseColor = mixColor(baseColor, QColor(255, 255, 255), glowTint);
                 QColor finalColor = applyAlpha(baseColor, alphaScale);
 
+                // Dim non-selected / non-connected edges when selection is active
+                if (!isGlow && (m_selectedNodeId != -1 || m_selectedEdgeSource != -1)) {
+                    bool isSelEdge = (edge.u == m_selectedEdgeSource && edge.v == m_selectedEdgeTarget)
+                                  || (edge.v == m_selectedEdgeSource && edge.u == m_selectedEdgeTarget);
+                    bool isConnected = (m_selectedNodeId != -1)
+                        && (edge.u == m_selectedNodeId || edge.v == m_selectedNodeId);
+                    if (!isSelEdge && !isConnected) {
+                        finalColor.setAlphaF(finalColor.alphaF() * 0.18);
+                    } else if (isConnected && !isSelEdge) {
+                        finalColor.setAlphaF(finalColor.alphaF() * 0.55);
+                    }
+                }
+
                 unsigned char r = static_cast<unsigned char>(finalColor.red());
                 unsigned char g = static_cast<unsigned char>(finalColor.green());
                 unsigned char b = static_cast<unsigned char>(finalColor.blue());
@@ -749,8 +867,6 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
         constexpr int NODE_VERTS_PER = 6;
         const int MAX_NODE_ITEMS_PER_CHUNK = std::max(1, 60000 / NODE_VERTS_PER);
 
-        float halfSize = static_cast<float>(std::clamp(pixelsPerUnit * 0.85, 3.2, 8.0));
-
         auto appendNodeLayer = [&](int chunkStart, int chunkSize, float sizeScale) {
             QSGGeometryNode *pointNode = new QSGGeometryNode();
             auto *material = new QSGTextureMaterial();
@@ -794,7 +910,147 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
             int chunkSize = chunkEnd - chunkStart;
             appendNodeLayer(chunkStart, chunkSize, static_cast<float>(m_nodeGlowSizeScale));
         }
+
+        m_baseChildCount = mapNode->childCount();
+    }
+
+    // Rebuild selection overlay on top of base geometry when needed
+    if (m_selectionDirty) {
+        rebuildSelectionOverlay(mapNode, halfSize, pixelsPerUnit);
+        m_selectionDirty = false;
     }
 
     return container;
+}
+
+void MapView::rebuildSelectionOverlay(QSGTransformNode* mapNode, float halfSize, double pixelsPerUnit) {
+    // Remove previous overlay children
+    while (mapNode->childCount() > m_baseChildCount)
+        mapNode->removeChildNode(mapNode->childAtIndex(mapNode->childCount() - 1));
+
+    auto getBasePos = [&](double x, double y) {
+        double worldW = m_range.maxX - m_range.minX;
+        double worldH = m_range.maxY - m_range.minY;
+        if (worldW <= 0) worldW = 1;
+        if (worldH <= 0) worldH = 1;
+        double baseScale = std::min(width() / worldW, height() / worldH);
+        double startX = (width()  - worldW * baseScale) / 2.0;
+        double startY = (height() - worldH * baseScale) / 2.0;
+        return QPointF(
+            startX + (x - m_range.minX) * baseScale * m_zoom,
+            startY + (y - m_range.minY) * baseScale * m_zoom);
+    };
+
+    // ── 1. Selected node glow ──
+    if (m_selectedNodeId != -1) {
+        Node n = m_graph->getNode(m_selectedNodeId);
+        QPointF p = getBasePos(n.x, n.y);
+        float px = static_cast<float>(p.x());
+        float py = static_cast<float>(p.y());
+        float r = halfSize * 1.8f;
+
+        QSGGeometryNode* sn = new QSGGeometryNode();
+        auto* mat = new QSGTextureMaterial();
+        mat->setTexture(m_nodeTexture);
+        mat->setFlag(QSGMaterial::Blending, true);
+        sn->setMaterial(mat);
+        sn->setFlag(QSGNode::OwnsMaterial);
+        sn->setFlag(QSGNode::OwnsGeometry);
+
+        QSGGeometry* sg = new QSGGeometry(
+            QSGGeometry::defaultAttributes_TexturedPoint2D(), 6);
+        sg->setDrawingMode(QSGGeometry::DrawTriangles);
+        auto* sv = sg->vertexDataAsTexturedPoint2D();
+        sv[0].set(px - r, py - r, 0.0f, 0.0f);
+        sv[1].set(px + r, py - r, 1.0f, 0.0f);
+        sv[2].set(px - r, py + r, 0.0f, 1.0f);
+        sv[3].set(px - r, py + r, 0.0f, 1.0f);
+        sv[4].set(px + r, py - r, 1.0f, 0.0f);
+        sv[5].set(px + r, py + r, 1.0f, 1.0f);
+        sn->setGeometry(sg);
+        mapNode->appendChildNode(sn);
+    }
+
+    // ── 2. Selected edge highlight ──
+    if (m_selectedEdgeSource != -1 && m_selectedEdgeTarget != -1) {
+        Node n1 = m_graph->getNode(m_selectedEdgeSource);
+        Node n2 = m_graph->getNode(m_selectedEdgeTarget);
+        QPointF p1 = getBasePos(n1.x, n1.y);
+        QPointF p2 = getBasePos(n2.x, n2.y);
+        double dx = p2.x() - p1.x();
+        double dy = p2.y() - p1.y();
+        double len = std::hypot(dx, dy);
+        if (len > 1e-5) {
+            double nx = dy / len;
+            double ny = -dx / len;
+            double w = std::clamp(pixelsPerUnit * 2.5, 2.5, 10.0);
+            double wx = nx * w / 2.0;
+            double wy = ny * w / 2.0;
+
+            QSGGeometryNode* en = new QSGGeometryNode();
+            auto* mat = new QSGVertexColorMaterial();
+            mat->setFlag(QSGMaterial::Blending, true);
+            en->setMaterial(mat);
+            en->setFlag(QSGNode::OwnsMaterial);
+            en->setFlag(QSGNode::OwnsGeometry);
+
+            QSGGeometry* eg = new QSGGeometry(
+                QSGGeometry::defaultAttributes_ColoredPoint2D(), 6);
+            eg->setDrawingMode(QSGGeometry::DrawTriangles);
+            auto* ev = eg->vertexDataAsColoredPoint2D();
+            QColor accent = m_selectionAccent;
+            unsigned char ar = static_cast<unsigned char>(accent.red());
+            unsigned char ag = static_cast<unsigned char>(accent.green());
+            unsigned char ab = static_cast<unsigned char>(accent.blue());
+            unsigned char aa = 240;
+            ev[0].set(p1.x() - wx, p1.y() - wy, ar, ag, ab, aa);
+            ev[1].set(p1.x() + wx, p1.y() + wy, ar, ag, ab, aa);
+            ev[2].set(p2.x() - wx, p2.y() - wy, ar, ag, ab, aa);
+            ev[3].set(p2.x() - wx, p2.y() - wy, ar, ag, ab, aa);
+            ev[4].set(p1.x() + wx, p1.y() + wy, ar, ag, ab, aa);
+            ev[5].set(p2.x() + wx, p2.y() + wy, ar, ag, ab, aa);
+            en->setGeometry(eg);
+            mapNode->appendChildNode(en);
+        }
+    }
+
+    // ── 3. Edge-click endpoint highlights (animated node glow) ──
+    if (!m_highlightedNodeIds.empty()) {
+        double et = m_nodeHighlightProgress;
+        double eased = et < 1.0
+            ? 1.0 + 0.8 * (1.0 - std::pow(1.0 - et, 3.0)) * (1.0 + 0.7 * std::sin(et * 3.1415926535))
+            : 1.8;
+        float hlRadius = halfSize * static_cast<float>(eased);
+
+        QSGGeometryNode* hn = new QSGGeometryNode();
+        auto* mat = new QSGTextureMaterial();
+        mat->setTexture(m_nodeTexture);
+        mat->setFlag(QSGMaterial::Blending, true);
+        hn->setMaterial(mat);
+        hn->setFlag(QSGNode::OwnsMaterial);
+        hn->setFlag(QSGNode::OwnsGeometry);
+
+        int hc = static_cast<int>(m_highlightedNodeIds.size());
+        QSGGeometry* hg = new QSGGeometry(
+            QSGGeometry::defaultAttributes_TexturedPoint2D(), hc * 6);
+        hg->setDrawingMode(QSGGeometry::DrawTriangles);
+        auto* hv = hg->vertexDataAsTexturedPoint2D();
+
+        int vi = 0;
+        for (int nid : m_highlightedNodeIds) {
+            Node nd = m_graph->getNode(nid);
+            QPointF p = getBasePos(nd.x, nd.y);
+            float px = static_cast<float>(p.x());
+            float py = static_cast<float>(p.y());
+            hv[vi + 0].set(px - hlRadius, py - hlRadius, 0.0f, 0.0f);
+            hv[vi + 1].set(px + hlRadius, py - hlRadius, 1.0f, 0.0f);
+            hv[vi + 2].set(px - hlRadius, py + hlRadius, 0.0f, 1.0f);
+            hv[vi + 3].set(px - hlRadius, py + hlRadius, 0.0f, 1.0f);
+            hv[vi + 4].set(px + hlRadius, py - hlRadius, 1.0f, 0.0f);
+            hv[vi + 5].set(px + hlRadius, py + hlRadius, 1.0f, 1.0f);
+            vi += 6;
+        }
+        hn->setGeometry(hg);
+        mapNode->appendChildNode(hn);
+    }
 }

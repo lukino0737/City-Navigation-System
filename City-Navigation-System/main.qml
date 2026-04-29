@@ -12,6 +12,7 @@ Window {
     color: theme.bgColor 
     
     property bool globalIsGenerating: false
+    property bool showingDetailPanel: false
     
     Connections {
         target: globalGraph
@@ -153,15 +154,20 @@ Window {
             nodeCoreAlpha: mapPalette.nodeCoreAlpha
             nodeGlowAlpha: mapPalette.nodeGlowAlpha
             nodeGlowSizeScale: mapPalette.nodeGlowSizeScale
+            selectionAccent: theme.accentColor
 
             // Map Interactions
             MouseArea {
+                id: mapMouse
                 anchors.fill: parent
                 scrollGestureEnabled: true
                 hoverEnabled: true
-                
+
                 property point lastPos: Qt.point(0, 0)
-                
+                property point pressPos: Qt.point(0, 0)
+                property bool isDragging: false
+                readonly property real dragThreshold: 5
+
                 function updateHoverState(mx, my) {
                     let hoveredNodePos = mapView.hitTestNode(Qt.point(mx, my), 10.0)
                     if (hoveredNodePos.found) {
@@ -203,23 +209,52 @@ Window {
                 }
 
                 onPressed: (mouse) => {
+                    pressPos = Qt.point(mouse.x, mouse.y)
                     lastPos = Qt.point(mouse.x, mouse.y)
+                    isDragging = false
                     updateHoverState(-1000, -1000)
                 }
 
                 onPositionChanged: (mouse) => {
                     if (pressed) {
-                        let dx = (mouse.x - lastPos.x) / mapView.width
-                        let dy = (mouse.y - lastPos.y) / mapView.height
-                        mapView.offset = Qt.point(mapView.offset.x + dx, mapView.offset.y + dy)
-                        lastPos = Qt.point(mouse.x, mouse.y)
+                        let dist = Math.hypot(mouse.x - pressPos.x, mouse.y - pressPos.y)
+                        if (dist > dragThreshold) isDragging = true
+                        if (isDragging) {
+                            let dx = (mouse.x - lastPos.x) / mapView.width
+                            let dy = (mouse.y - lastPos.y) / mapView.height
+                            mapView.offset = Qt.point(mapView.offset.x + dx, mapView.offset.y + dy)
+                            lastPos = Qt.point(mouse.x, mouse.y)
+                        }
                     } else {
                         updateHoverState(mouse.x, mouse.y)
                     }
                 }
 
+                onReleased: (mouse) => {
+                    if (!isDragging) handleMapClick(mouse.x, mouse.y)
+                }
+
                 onWheel: (wheel) => {
                     mapView.addZoomVelocity(wheel.angleDelta.y / 120.0)
+                }
+
+                function handleMapClick(mx, my) {
+                    let nodeHit = mapView.hitTestNode(Qt.point(mx, my), 12.0)
+                    if (nodeHit.found) {
+                        let info = mapView.selectNode(nodeHit.id)
+                        detailPanel.showInfo(info)
+                        showingDetailPanel = true
+                        return
+                    }
+                    let edgeHit = mapView.hitTestEdge(Qt.point(mx, my), 6.0)
+                    if (edgeHit.found) {
+                        let info = mapView.selectEdge(edgeHit.source, edgeHit.target)
+                        detailPanel.showInfo(info)
+                        showingDetailPanel = true
+                        return
+                    }
+                    mapView.clearSelection()
+                    showingDetailPanel = false
                 }
             }
         }
@@ -395,6 +430,7 @@ Window {
         mapView: mapView
         blurTarget: mapContainer
         isGenerating: globalIsGenerating
+        active: !showingDetailPanel
         onRegenerateClicked: {
             globalIsGenerating = true
             globalGraph.regenerateGraph(10000)
@@ -405,5 +441,40 @@ Window {
     SettingsDialog {
         id: settingsDialog
         blurTarget: mapContainer
+    }
+
+    DetailPanel {
+        id: detailPanel
+        y: 24
+        width: 340
+        height: parent.height - 48
+        z: 11
+        blurTarget: mapContainer
+        
+        x: (mapView.selectionMode !== "none" && showingDetailPanel) 
+           ? parent.width - width - 24 
+           : parent.width + 24
+           
+        Behavior on x { NumberAnimation { duration: 450; easing.type: Easing.OutQuint } }
+    }
+
+    ViewSwitcher {
+        id: switcher
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 48
+        anchors.right: parent.right
+        anchors.rightMargin: 24 + (rightPanel.width - width) / 2
+        z: 15
+        
+        detailsEnabled: mapView.selectionMode !== "none"
+        currentIndex: showingDetailPanel ? 1 : 0
+        
+        visible: detailsEnabled
+        opacity: visible ? 1.0 : 0.0
+        Behavior on opacity { NumberAnimation { duration: 300 } }
+        
+        onSwitched: (index) => {
+            showingDetailPanel = (index === 1)
+        }
     }
 }
