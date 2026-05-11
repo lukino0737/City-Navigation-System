@@ -2,6 +2,8 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QFont>
+#include <QQuickStyle>
+#include <QSurfaceFormat>
 #include <core/modules/DataGenerator.h>
 #include <api/NavigationAPI.h>
 #include <core/DataModel/Graph.h>
@@ -13,8 +15,14 @@ int main(int argc, char *argv[])
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
 
+    QSurfaceFormat format;
+    format.setSamples(4);
+    QSurfaceFormat::setDefaultFormat(format);
+
     QGuiApplication app(argc, argv);
     app.setFont(QFont("Microsoft YaHei", 10));
+
+    QQuickStyle::setStyle("Basic");
 
     // 1. 注册 C++ 渲染组件到 QML
     qmlRegisterType<MapView>("Navigation", 1, 0, "MapView");

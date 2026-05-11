@@ -15,6 +15,7 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR}
     COMPONENTS
         Quick
+    QuickControls2
 )
 qt_standard_project_setup()
 
@@ -54,17 +55,24 @@ if(QT_VERSION VERSION_GREATER_EQUAL 6.2)
         RESOURCE_PREFIX "/qt/qml/"
         QML_FILES
             main.qml
+            GlassPanel.qml
+            Sidebar.qml
+            RightPanel.qml
+            SettingsDialog.qml
+            DetailPanel.qml
+            ViewSwitcher.qml
     )
 endif()
 
 set_target_properties(${PROJECT_NAME}
     PROPERTIES
-        WIN32_EXECUTABLE TRUE
+        WIN32_EXECUTABLE FALSE
 )
 
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
         Qt::Quick
+    Qt::QuickControls2
 )
 
 
