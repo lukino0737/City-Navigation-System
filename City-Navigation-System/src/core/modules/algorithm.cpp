@@ -38,7 +38,7 @@ PathResult calculateShortestPath(int startId, int endId, bool considerTraffic,Gr
         double currentCost = current.first;
         int u = current.second;
 
-        if (u <= 0 || u >= MAX_NODES) continue; 
+        if (u < 0 || u >= MAX_NODES) continue; 
 
         if (visited[u]) continue;
         

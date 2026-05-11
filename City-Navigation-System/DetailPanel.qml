@@ -34,17 +34,32 @@ Item {
             ColumnLayout {
                 spacing: 4
                 Text {
-                    text: infoData.type === "node" ? "NODE DETAILS" : "EDGE DETAILS"
+                    text: {
+                        if (infoData.type === "node") return i18n.t("detail.header.node")
+                        if (infoData.type === "edge") return i18n.t("detail.header.edge")
+                        if (infoData.type === "path") return i18n.t("detail.header.path")
+                        return ""
+                    }
                     color: theme.accentColor
                     font.pixelSize: 11
                     font.letterSpacing: 2
                     font.weight: Font.Bold
                 }
                 Text {
-                    text: infoData.type === "node"
-                        ? "Intersection #" + (infoData.id || "—")
-                        : "Connection " + (infoData.source || "—") + " ↔ " + (infoData.target || "—")
-                    color: theme.textColor
+                    text: {
+                        if (infoData.type === "node")
+                            return i18n.t("detail.title.node", infoData.id || "—")
+                        if (infoData.type === "edge")
+                            return i18n.t("detail.title.edge", infoData.source || "—", infoData.target || "—")
+                        if (infoData.type === "path") {
+                            if (infoData.found)
+                                return i18n.t("detail.title.path.ok", infoData.startId || "—", infoData.endId || "—")
+                            else
+                                return i18n.t("detail.title.path.fail")
+                        }
+                        return ""
+                    }
+                    color: (infoData.type === "path" && !infoData.found) ? "#f87171" : theme.textColor
                     font.pixelSize: 22
                     font.weight: Font.Light
                     elide: Text.ElideRight
@@ -68,15 +83,28 @@ Item {
                         model: {
                             var rows = []
                             if (infoData.type === "node") {
-                                rows.push({label: "Node ID",    value: infoData.id || "—"})
-                                rows.push({label: "Position X", value: (infoData.x !== undefined ? infoData.x.toFixed(2) : "—")})
-                                rows.push({label: "Position Y", value: (infoData.y !== undefined ? infoData.y.toFixed(2) : "—")})
-                                rows.push({label: "Degree",     value: infoData.degree !== undefined ? infoData.degree : "—"})
+                                rows.push({label: i18n.t("detail.node.id"),    value: infoData.id || "—"})
+                                rows.push({label: i18n.t("detail.node.x"), value: (infoData.x !== undefined ? infoData.x.toFixed(2) : "—")})
+                                rows.push({label: i18n.t("detail.node.y"), value: (infoData.y !== undefined ? infoData.y.toFixed(2) : "—")})
+                                rows.push({label: i18n.t("detail.node.degree"),     value: infoData.degree !== undefined ? infoData.degree : "—"})
                             } else if (infoData.type === "edge") {
-                                rows.push({label: "Source ID",   value: infoData.source || "—"})
-                                rows.push({label: "Target ID",   value: infoData.target || "—"})
-                                rows.push({label: "Capacity",    value: infoData.capacity || "—"})
-                                rows.push({label: "Length",      value: infoData.length !== undefined ? infoData.length.toFixed(1) : "—"})
+                                rows.push({label: i18n.t("detail.edge.source"),   value: infoData.source || "—"})
+                                rows.push({label: i18n.t("detail.edge.target"),   value: infoData.target || "—"})
+                                rows.push({label: i18n.t("detail.edge.capacity"),    value: infoData.capacity || "—"})
+                                rows.push({label: i18n.t("detail.edge.length"),      value: infoData.length !== undefined ? infoData.length.toFixed(1) : "—"})
+                            } else if (infoData.type === "path") {
+                                if (infoData.found) {
+                                    rows.push({label: i18n.t("detail.path.start"),   value: infoData.startId || "—"})
+                                    rows.push({label: i18n.t("detail.path.end"),     value: infoData.endId || "—"})
+                                    rows.push({label: i18n.t("detail.path.cost"),   value: infoData.totalCost !== undefined ? infoData.totalCost.toFixed(2) : "—"})
+                                    rows.push({label: i18n.t("detail.path.hops"),         value: infoData.hopCount !== undefined ? infoData.hopCount : "—"})
+                                    rows.push({label: i18n.t("detail.path.nodes"), value: infoData.nodeCount !== undefined ? infoData.nodeCount : "—"})
+                                    rows.push({label: i18n.t("detail.path.time"), value: infoData.timeMs !== undefined ? infoData.timeMs.toFixed(2) + i18n.t("detail.path.timeUnit") : "—"})
+                                } else {
+                                    rows.push({label: i18n.t("detail.path.start"), value: infoData.startId || "—"})
+                                    rows.push({label: i18n.t("detail.path.end"),   value: infoData.endId || "—"})
+                                    rows.push({label: i18n.t("detail.path.result"),     value: i18n.t("detail.path.noRoute")})
+                                }
                             }
                             return rows
                         }
