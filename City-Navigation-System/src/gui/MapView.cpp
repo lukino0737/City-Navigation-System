@@ -1,4 +1,5 @@
 #include "MapView.h"
+#include "../core/modules/algorithm.h"
 #include <QSGGeometry>
 #include <QSGVertexColorMaterial>
 #include <QSGTextureMaterial>
@@ -235,6 +236,84 @@ void MapView::onAnimTick() {
 
     if (m_nodeHighlightProgress >= 1.0)
         m_animTimer->stop();
+}
+
+void MapView::setRouteMode(bool active) {
+    if (m_routeMode != active) {
+        m_routeMode = active;
+        clearRoute();
+        emit routeModeChanged();
+    }
+}
+
+void MapView::selectRouteNode(int nodeId) {
+    if (!m_graph) return;
+
+    // First click: set start node
+    if (m_routeStartNodeId == -1) {
+        m_routeStartNodeId = nodeId;
+        selectNode(nodeId);
+        emit routeChanged();
+        return;
+    }
+
+    // Second click
+    if (m_routeEndNodeId == -1) {
+        if (nodeId == m_routeStartNodeId) {
+            clearRoute();
+            return;
+        }
+        m_routeEndNodeId = nodeId;
+        m_pathResult = calculateShortestPath(m_routeStartNodeId, nodeId, false, *m_graph);
+        m_pathDirty = true;
+        selectNode(nodeId);
+        emit routeChanged();
+
+        QVariantMap info = getPathInfo();
+        emit pathResultReady(info);
+        update();
+        return;
+    }
+
+    // Both already set — restart with new start
+    clearRoute();
+    m_routeStartNodeId = nodeId;
+    selectNode(nodeId);
+    emit routeChanged();
+}
+
+void MapView::clearRoute() {
+    m_routeStartNodeId = -1;
+    m_routeEndNodeId = -1;
+    m_pathResult = PathResult();
+    m_pathDirty = true;
+    clearSelection();
+    emit routeChanged();
+}
+
+QVariantMap MapView::getPathInfo() const {
+    QVariantMap info;
+    info["type"] = "path";
+    if (!m_pathResult.success) {
+        info["found"] = false;
+        info["startId"] = m_routeStartNodeId;
+        info["endId"] = m_routeEndNodeId;
+        return info;
+    }
+    info["found"] = true;
+    info["startId"] = m_routeStartNodeId;
+    info["endId"] = m_routeEndNodeId;
+    info["totalCost"] = m_pathResult.total_cost;
+    info["hopCount"] = static_cast<int>(m_pathResult.path_nodes.size()) - 1;
+    info["nodeCount"] = static_cast<int>(m_pathResult.path_nodes.size());
+    info["timeMs"] = m_pathResult.time_spent_ms;
+
+    QVariantList nodeList;
+    for (int nid : m_pathResult.path_nodes) {
+        nodeList.append(nid);
+    }
+    info["pathNodeIds"] = nodeList;
+    return info;
 }
 
 void MapView::setZoom(double z) {
@@ -513,29 +592,34 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
         m_geometryDirty = true;
     }
 
-    int visibleCount = totalNodeCount;
-    if (m_lodEnabled) {
+    bool needRecalc = false;
+    int targetVisible = totalNodeCount;
+    const int MIN_VISIBLE = 200;
+
+    if (m_lodAutoZoom) {
         double lodRatio = (m_bakedLodZoom > 0.0) ? (m_zoom / m_bakedLodZoom) : 999.0;
         if (lodRatio < 0.6 || lodRatio > 1.6 || m_cachedVisibleCount < 0) {
-            const int MIN_VISIBLE = 200;
-            // Normalize zoom to [0, 1] so that lodIntensity always controls
-            // the reduction consistently: Soft → more nodes, Aggressive → fewer nodes,
-            // at every zoom level (zoom ∈ [0.1, 50.0], log scale for natural feel).
             double zoomNorm = std::clamp(
                 std::log(m_zoom / 0.1) / std::log(50.0 / 0.1), 0.0, 1.0);
-            int targetVisible = static_cast<int>(
+            targetVisible = static_cast<int>(
                 MIN_VISIBLE + (totalNodeCount - MIN_VISIBLE) * std::pow(zoomNorm, m_lodIntensity));
-            int newVisible = std::min(targetVisible, static_cast<int>(m_nodesByDegree.size()));
-
             m_bakedLodZoom = m_zoom;
-
-            if (std::abs(m_cachedVisibleCount - newVisible) > std::max(100, m_cachedVisibleCount / 5)) {
-                m_cachedVisibleCount = newVisible;
-                m_topologyDirty = true;
-            }
+            needRecalc = true;
         }
-        visibleCount = m_cachedVisibleCount;
+    } else {
+        targetVisible = static_cast<int>(
+            MIN_VISIBLE + (totalNodeCount - MIN_VISIBLE) * (1.0 - m_lodIntensity / 3.0));
+        needRecalc = true;
     }
+
+    if (needRecalc) {
+        int newVisible = std::min(targetVisible, static_cast<int>(m_nodesByDegree.size()));
+        if (std::abs(m_cachedVisibleCount - newVisible) > std::max(100, m_cachedVisibleCount / 5)) {
+            m_cachedVisibleCount = newVisible;
+            m_topologyDirty = true;
+        }
+    }
+    int visibleCount = m_cachedVisibleCount;
 
     if (m_hoveredEdgeSource != m_cachedHoverLo || m_hoveredEdgeTarget != m_cachedHoverHi) {
         m_topologyDirty = true; // Need to map hovered edge to macroscopic nodes
@@ -558,14 +642,15 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     matrix.scale(s, s);
     mapNode->setMatrix(matrix);
 
-    // Selection-only dirty → rebuild overlay, skip base geometry (animation frames)
-    if (!m_topologyDirty && !m_geometryDirty && !m_styleDirty && m_selectionDirty) {
+    // Selection / path-only dirty → rebuild overlay, skip base geometry (animation frames)
+    if (!m_topologyDirty && !m_geometryDirty && !m_styleDirty && (m_selectionDirty || m_pathDirty)) {
         rebuildSelectionOverlay(mapNode, halfSize, pixelsPerUnit);
         m_selectionDirty = false;
+        m_pathDirty = false;
         return container;
     }
 
-    if (!m_topologyDirty && !m_geometryDirty && !m_styleDirty && !m_selectionDirty) {
+    if (!m_topologyDirty && !m_geometryDirty && !m_styleDirty && !m_selectionDirty && !m_pathDirty) {
         return container; // 只有 offset 改变或轻微缩放时，直接返回，实现 0 成本高帧率
     }
 
@@ -593,6 +678,16 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
             bfsQ.push(m_selectedNodeId);
         }
 
+        // Force-include path nodes in BFS seeds
+        if (m_pathResult.success) {
+            for (int pathNodeId : m_pathResult.path_nodes) {
+                if (pathNodeId <= maxId && nodeOwner[pathNodeId] == -1) {
+                    nodeOwner[pathNodeId] = pathNodeId;
+                    bfsQ.push(pathNodeId);
+                }
+            }
+        }
+
         while (!bfsQ.empty()) {
             int curId = bfsQ.front(); bfsQ.pop();
             int owner = nodeOwner[curId];
@@ -604,7 +699,7 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
             }
         }
 
-        struct TempEdge { uint64_t key; int capacity; double ratio; };
+        struct TempEdge { uint64_t key; int capacity; double ratio; bool isDirect; };
         std::vector<TempEdge> tempEdges;
         tempEdges.reserve(edges.size());
 
@@ -618,7 +713,10 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
             int hi = std::max(ownerSrc, ownerDst);
             uint64_t key = (static_cast<uint64_t>(hi) << 32) | static_cast<uint64_t>(lo);
             double ratio = (edge.capacity > 0) ? static_cast<double>(edge.currentCars) / edge.capacity : 0;
-            tempEdges.push_back({key, static_cast<int>(edge.capacity), ratio});
+            // Direct edge: both endpoints are the visible owner nodes themselves
+            bool isDirect = (edge.source == ownerSrc && edge.target == ownerDst)
+                         || (edge.source == ownerDst && edge.target == ownerSrc);
+            tempEdges.push_back({key, static_cast<int>(edge.capacity), ratio, isDirect});
         }
 
         std::sort(tempEdges.begin(), tempEdges.end(), [](const TempEdge& a, const TempEdge& b){
@@ -629,18 +727,21 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
             uint64_t lastKey = tempEdges[0].key;
             int maxCap = tempEdges[0].capacity;
             double maxRatio = tempEdges[0].ratio;
+            bool allDirect = tempEdges[0].isDirect;
             for (size_t i = 1; i < tempEdges.size(); ++i) {
                 if (tempEdges[i].key == lastKey) {
                     if (tempEdges[i].capacity > maxCap) maxCap = tempEdges[i].capacity;
                     if (tempEdges[i].ratio > maxRatio) maxRatio = tempEdges[i].ratio;
+                    if (!tempEdges[i].isDirect) allDirect = false;
                 } else {
-                    m_cachedLogicalEdges.push_back({static_cast<int>(lastKey & 0xFFFFFFFF), static_cast<int>(lastKey >> 32), maxRatio, maxCap});
+                    m_cachedLogicalEdges.push_back({static_cast<int>(lastKey & 0xFFFFFFFF), static_cast<int>(lastKey >> 32), maxRatio, maxCap, allDirect});
                     lastKey = tempEdges[i].key;
                     maxCap = tempEdges[i].capacity;
                     maxRatio = tempEdges[i].ratio;
+                    allDirect = tempEdges[i].isDirect;
                 }
             }
-            m_cachedLogicalEdges.push_back({static_cast<int>(lastKey & 0xFFFFFFFF), static_cast<int>(lastKey >> 32), maxRatio, maxCap});
+            m_cachedLogicalEdges.push_back({static_cast<int>(lastKey & 0xFFFFFFFF), static_cast<int>(lastKey >> 32), maxRatio, maxCap, allDirect});
         }
 
         m_cachedHoverLo = m_hoveredEdgeSource;
@@ -681,6 +782,7 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
             double ratio;
             int capacity;
             bool isHovered;
+            bool isDirect;
             double baseWidth;
             int u, v;
         };
@@ -693,6 +795,18 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
 
         std::vector<DrawEdge> drawEdges;
         drawEdges.reserve(m_cachedLogicalEdges.size());
+
+        // Build path edge key set for O(1) lookup during dim check
+        std::unordered_set<uint64_t> pathEdgeKeys;
+        if (m_pathResult.success) {
+            const auto& pn = m_pathResult.path_nodes;
+            for (size_t pi = 0; pi + 1 < pn.size(); ++pi) {
+                int lo = std::min(pn[pi], pn[pi + 1]);
+                int hi = std::max(pn[pi], pn[pi + 1]);
+                pathEdgeKeys.insert((static_cast<uint64_t>(hi) << 32) | static_cast<uint64_t>(lo));
+            }
+        }
+
         for (const auto& logEdge : m_cachedLogicalEdges) {
             Node n1 = m_graph->getNode(logEdge.u);
             Node n2 = m_graph->getNode(logEdge.v);
@@ -705,7 +819,7 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
                              (logEdge.v == hoverLoMapping && logEdge.u == hoverHiMapping);
                              
             double baseWidth = baseEdgeWidth(logEdge.capacity);
-            drawEdges.push_back({p1, p2, logEdge.ratio, logEdge.capacity, isHovered, baseWidth, logEdge.u, logEdge.v});
+            drawEdges.push_back({p1, p2, logEdge.ratio, logEdge.capacity, isHovered, logEdge.isDirect, baseWidth, logEdge.u, logEdge.v});
         }
 
         std::sort(drawEdges.begin(), drawEdges.end(), [](const DrawEdge& a, const DrawEdge& b) {
@@ -790,11 +904,22 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
                                   || (edge.v == m_selectedEdgeSource && edge.u == m_selectedEdgeTarget);
                     bool isConnected = (m_selectedNodeId != -1)
                         && (edge.u == m_selectedNodeId || edge.v == m_selectedNodeId);
-                    if (!isSelEdge && !isConnected) {
+                    int lo = std::min(edge.u, edge.v);
+                    int hi = std::max(edge.u, edge.v);
+                    uint64_t ek = (static_cast<uint64_t>(hi) << 32) | static_cast<uint64_t>(lo);
+                    bool isPathEdge = pathEdgeKeys.count(ek) > 0;
+                    if (!isSelEdge && !isConnected && !isPathEdge) {
                         finalColor.setAlphaF(finalColor.alphaF() * 0.18);
-                    } else if (isConnected && !isSelEdge) {
+                    } else if ((isConnected || isPathEdge) && !isSelEdge) {
                         finalColor.setAlphaF(finalColor.alphaF() * 0.55);
                     }
+                }
+
+                // Override color to gray for virtual (non-direct) edges
+                if (!isGlow && !edge.isDirect) {
+                    baseColor = m_virtualEdgeColor;
+                    if (glowTint > 0.0) baseColor = mixColor(baseColor, QColor(255, 255, 255), glowTint);
+                    finalColor = applyAlpha(baseColor, alphaScale);
                 }
 
                 unsigned char r = static_cast<unsigned char>(finalColor.red());
@@ -817,7 +942,6 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
         for (int chunkStart = 0; chunkStart < ve; chunkStart += MAX_ITEMS_PER_CHUNK) {
             int chunkEnd = std::min(ve, chunkStart + MAX_ITEMS_PER_CHUNK);
             int chunkSize = chunkEnd - chunkStart;
-            appendEdgeLayer(chunkStart, chunkSize, m_edgeGlowWidthScale, m_edgeGlowAlpha, 0.35, true);
             appendEdgeLayer(chunkStart, chunkSize, 1.0, m_edgeCoreAlpha, 0.0, false);
         }
 
@@ -914,10 +1038,13 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
         m_baseChildCount = mapNode->childCount();
     }
 
-    // Rebuild selection overlay on top of base geometry when needed
-    if (m_selectionDirty) {
+    // Rebuild selection / path overlay on top of base geometry when needed.
+    // m_pathResult.success guards against zoom-triggered geometry rebuilds that
+    // strip the path overlay via removeAllChildNodes().
+    if (m_selectionDirty || m_pathDirty || m_pathResult.success) {
         rebuildSelectionOverlay(mapNode, halfSize, pixelsPerUnit);
         m_selectionDirty = false;
+        m_pathDirty = false;
     }
 
     return container;
@@ -1052,5 +1179,90 @@ void MapView::rebuildSelectionOverlay(QSGTransformNode* mapNode, float halfSize,
         }
         hn->setGeometry(hg);
         mapNode->appendChildNode(hn);
+    }
+
+    // ── 4. Path route overlay ──
+    if (m_pathResult.success && m_pathResult.path_nodes.size() >= 2) {
+        const auto& pathNodes = m_pathResult.path_nodes;
+
+        // 4a. Path edges: thick amber lines
+        for (size_t i = 0; i < pathNodes.size() - 1; ++i) {
+            int srcId = pathNodes[i];
+            int tgtId = pathNodes[i + 1];
+            Node n1 = m_graph->getNode(srcId);
+            Node n2 = m_graph->getNode(tgtId);
+            QPointF p1 = getBasePos(n1.x, n1.y);
+            QPointF p2 = getBasePos(n2.x, n2.y);
+            double dx = p2.x() - p1.x();
+            double dy = p2.y() - p1.y();
+            double len = std::hypot(dx, dy);
+            if (len < 1e-5) continue;
+
+            double nx = dy / len;
+            double ny = -dx / len;
+            double w = std::clamp(pixelsPerUnit * 5.0, 4.0, 14.0);
+            double wx = nx * w / 2.0;
+            double wy = ny * w / 2.0;
+
+            QSGGeometryNode* pen = new QSGGeometryNode();
+            auto* pmat = new QSGVertexColorMaterial();
+            pmat->setFlag(QSGMaterial::Blending, true);
+            pen->setMaterial(pmat);
+            pen->setFlag(QSGNode::OwnsMaterial);
+            pen->setFlag(QSGNode::OwnsGeometry);
+
+            QSGGeometry* peg = new QSGGeometry(
+                QSGGeometry::defaultAttributes_ColoredPoint2D(), 6);
+            peg->setDrawingMode(QSGGeometry::DrawTriangles);
+            auto* pev = peg->vertexDataAsColoredPoint2D();
+            QColor pc = m_pathHighlightColor;
+            unsigned char pr = static_cast<unsigned char>(pc.red());
+            unsigned char pg = static_cast<unsigned char>(pc.green());
+            unsigned char pb = static_cast<unsigned char>(pc.blue());
+            unsigned char pa = 230;
+            pev[0].set(p1.x() - wx, p1.y() - wy, pr, pg, pb, pa);
+            pev[1].set(p1.x() + wx, p1.y() + wy, pr, pg, pb, pa);
+            pev[2].set(p2.x() - wx, p2.y() - wy, pr, pg, pb, pa);
+            pev[3].set(p2.x() - wx, p2.y() - wy, pr, pg, pb, pa);
+            pev[4].set(p1.x() + wx, p1.y() + wy, pr, pg, pb, pa);
+            pev[5].set(p2.x() + wx, p2.y() + wy, pr, pg, pb, pa);
+            pen->setGeometry(peg);
+            mapNode->appendChildNode(pen);
+        }
+
+        // 4b. Interior path node markers
+        int interiorCount = static_cast<int>(pathNodes.size()) - 2;
+        if (interiorCount > 0) {
+            float pathNodeRadius = halfSize * 1.0f;
+            QSGGeometryNode* pnn = new QSGGeometryNode();
+            auto* pnmat = new QSGTextureMaterial();
+            pnmat->setTexture(m_nodeTexture);
+            pnmat->setFlag(QSGMaterial::Blending, true);
+            pnn->setMaterial(pnmat);
+            pnn->setFlag(QSGNode::OwnsMaterial);
+            pnn->setFlag(QSGNode::OwnsGeometry);
+
+            QSGGeometry* png = new QSGGeometry(
+                QSGGeometry::defaultAttributes_TexturedPoint2D(), interiorCount * 6);
+            png->setDrawingMode(QSGGeometry::DrawTriangles);
+            auto* pnv = png->vertexDataAsTexturedPoint2D();
+
+            int vi = 0;
+            for (size_t i = 1; i < pathNodes.size() - 1; ++i) {
+                Node nd = m_graph->getNode(pathNodes[i]);
+                QPointF p = getBasePos(nd.x, nd.y);
+                float px = static_cast<float>(p.x());
+                float py = static_cast<float>(p.y());
+                pnv[vi + 0].set(px - pathNodeRadius, py - pathNodeRadius, 0.0f, 0.0f);
+                pnv[vi + 1].set(px + pathNodeRadius, py - pathNodeRadius, 1.0f, 0.0f);
+                pnv[vi + 2].set(px - pathNodeRadius, py + pathNodeRadius, 0.0f, 1.0f);
+                pnv[vi + 3].set(px - pathNodeRadius, py + pathNodeRadius, 0.0f, 1.0f);
+                pnv[vi + 4].set(px + pathNodeRadius, py - pathNodeRadius, 1.0f, 0.0f);
+                pnv[vi + 5].set(px + pathNodeRadius, py + pathNodeRadius, 1.0f, 1.0f);
+                vi += 6;
+            }
+            pnn->setGeometry(png);
+            mapNode->appendChildNode(pnn);
+        }
     }
 }

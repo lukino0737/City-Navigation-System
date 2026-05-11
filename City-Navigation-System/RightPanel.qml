@@ -80,14 +80,14 @@ Item {
         ColumnLayout {
             spacing: 4
             Text {
-                text: "NAVIGATION"
+                text: i18n.t("rightpanel.header")
                 color: theme.accentColor
                 font.pixelSize: 11
                 font.letterSpacing: 2
                 font.weight: Font.Bold
             }
             Text {
-                text: "Control Center"
+                text: i18n.t("rightpanel.title")
                 color: theme.textColor
                 font.pixelSize: 24
                 font.weight: Font.Light
@@ -102,10 +102,10 @@ Item {
             columnSpacing: 24
             Layout.fillWidth: true
             
-            Text { text: "Total Nodes"; color: theme.subTextColor; font.pixelSize: 13 }
+            Text { text: i18n.t("rightpanel.nodes"); color: theme.subTextColor; font.pixelSize: 13 }
             Text { text: "10,000"; color: theme.textColor; font.pixelSize: 14; font.weight: Font.Medium; Layout.alignment: Qt.AlignRight }
             
-            Text { text: "Zoom Level"; color: theme.subTextColor; font.pixelSize: 13 }
+            Text { text: i18n.t("rightpanel.zoom"); color: theme.subTextColor; font.pixelSize: 13 }
             Text { text: (mapView ? mapView.zoom.toFixed(2) : "1.0") + "x"; color: theme.textColor; font.pixelSize: 14; font.weight: Font.Medium; Layout.alignment: Qt.AlignRight }
         }
 
@@ -118,7 +118,7 @@ Item {
             Button {
                 id: regenBtn
                 Layout.fillWidth: true
-                text: root.isGenerating ? "Generating..." : "Regenerate Network"
+                text: root.isGenerating ? i18n.t("rightpanel.generating") : i18n.t("rightpanel.regen")
                 enabled: !root.isGenerating
                 onClicked: {
                     if (!root.isGenerating) {
@@ -126,7 +126,7 @@ Item {
                     }
                 }
                 contentItem: Text {
-                    text: regenBtn.text
+                    text: root.isGenerating ? i18n.t("rightpanel.generating") : i18n.t("rightpanel.regen")
                     color: root.isGenerating ? theme.subTextColor : theme.textColor
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
@@ -142,53 +142,27 @@ Item {
                 }
             }
 
-            Button {
-                id: lodBtn
-                Layout.fillWidth: true
-                text: mapView && mapView.lodEnabled ? "LOD: Active" : "LOD: Inactive"
-                onClicked: {
-                    if (mapView) mapView.lodEnabled = !mapView.lodEnabled
-                }
-                contentItem: Text {
-                    text: lodBtn.text
-                    color: (mapView && mapView.lodEnabled) ? theme.accentColor : theme.subTextColor
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.pixelSize: 13
-                    font.weight: Font.Medium
-                }
-                background: Rectangle {
-                    implicitHeight: 44
-                    radius: 12
-                    color: (mapView && mapView.lodEnabled) ? theme.activePill : (lodBtn.hovered ? theme.buttonHover : "transparent")
-                    border.color: (mapView && mapView.lodEnabled) ? Qt.rgba(theme.accentColor.r, theme.accentColor.g, theme.accentColor.b, 0.4) : (lodBtn.hovered ? theme.panelBorder : "transparent")
-                    border.width: 1
-                }
-            }
-
             // LOD Intensity Slider
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 8
-                opacity: (mapView && mapView.lodEnabled) ? 1.0 : 0.35
-                Behavior on opacity { NumberAnimation { duration: 200 } }
 
                 RowLayout {
                     Layout.fillWidth: true
                     Text {
-                        text: "LOD Intensity"
+                        text: i18n.t("rightpanel.lod")
                         color: theme.subTextColor
                         font.pixelSize: 12
                     }
                     Item { Layout.fillWidth: true }
                     Text {
-                        id: lodValueLabel
                         text: {
                             if (!mapView) return "–"
                             let v = mapView.lodIntensity
-                            if (v < 0.9)  return "Soft (" + v.toFixed(1) + ")"
-                            if (v < 2.1)  return "Balanced (" + v.toFixed(1) + ")"
-                            return "Aggressive (" + v.toFixed(1) + ")"
+                            if (v <= 0.05) return i18n.t("rightpanel.lod.full") + " (" + v.toFixed(1) + ")"
+                            if (v < 0.9)  return i18n.t("rightpanel.lod.soft") + " (" + v.toFixed(1) + ")"
+                            if (v < 2.1)  return i18n.t("rightpanel.lod.bal") + " (" + v.toFixed(1) + ")"
+                            return i18n.t("rightpanel.lod.agg") + " (" + v.toFixed(1) + ")"
                         }
                         color: theme.accentColor
                         font.pixelSize: 11
@@ -196,14 +170,11 @@ Item {
                     }
                 }
 
-                // Custom-styled Slider
                 Item {
                     Layout.fillWidth: true
                     height: 24
 
-                    // Track background
                     Rectangle {
-                        id: trackBg
                         width: parent.width
                         height: 4
                         anchors.verticalCenter: parent.verticalCenter
@@ -211,9 +182,8 @@ Item {
                         color: theme.dividerColor
                     }
 
-                    // Filled portion (left of handle)
                     Rectangle {
-                        width: lodSlider.visualPosition * trackBg.width
+                        width: lodSlider.visualPosition * parent.width
                         height: 4
                         anchors.verticalCenter: parent.verticalCenter
                         radius: 2
@@ -227,40 +197,31 @@ Item {
                     Slider {
                         id: lodSlider
                         anchors.fill: parent
-                        from: 0.3
+                        from: 0.0
                         to: 3.0
                         stepSize: 0.1
-                        value: mapView ? mapView.lodIntensity : 1.5
-                        enabled: mapView && mapView.lodEnabled
+                        value: mapView ? mapView.lodIntensity : 1.0
 
                         onMoved: {
                             if (mapView) mapView.lodIntensity = value
                         }
 
-                        background: Item {}   
-
+                        background: Item {}
                         handle: Rectangle {
                             x: lodSlider.visualPosition * (lodSlider.width - width)
                             y: (lodSlider.height - height) / 2
-                            width: 16
-                            height: 16
-                            radius: 8
+                            width: 16; height: 16; radius: 8
                             color: theme.accentColor
                             border.color: Qt.rgba(theme.accentColor.r, theme.accentColor.g, theme.accentColor.b, 0.4)
                             border.width: 3
-
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: parent.width + 8
-                                height: parent.height + 8
-                                radius: width / 2
+                                width: parent.width + 8; height: parent.height + 8; radius: width / 2
                                 color: "transparent"
                                 border.color: Qt.rgba(theme.accentColor.r, theme.accentColor.g, theme.accentColor.b, lodSlider.pressed ? 0.5 : 0.0)
                                 border.width: 2
                                 Behavior on border.color { ColorAnimation { duration: 150 } }
                             }
-
-                            Behavior on color { ColorAnimation { duration: 150 } }
                             scale: lodSlider.pressed ? 1.2 : 1.0
                             Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
                         }
@@ -269,11 +230,38 @@ Item {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "Soft";       font.pixelSize: 10; color: theme.subTextColor; opacity: 0.6 }
+                    Text { text: i18n.t("rightpanel.lod.full");      font.pixelSize: 10; color: theme.subTextColor; opacity: 0.6 }
                     Item { Layout.fillWidth: true }
-                    Text { text: "Balanced";   font.pixelSize: 10; color: theme.subTextColor; opacity: 0.6 }
+                    Text { text: i18n.t("rightpanel.lod.soft");      font.pixelSize: 10; color: theme.subTextColor; opacity: 0.6 }
                     Item { Layout.fillWidth: true }
-                    Text { text: "Aggressive"; font.pixelSize: 10; color: theme.subTextColor; opacity: 0.6 }
+                    Text { text: i18n.t("rightpanel.lod.bal");  font.pixelSize: 10; color: theme.subTextColor; opacity: 0.6 }
+                    Item { Layout.fillWidth: true }
+                    Text { text: i18n.t("rightpanel.lod.agg");font.pixelSize: 10; color: theme.subTextColor; opacity: 0.6 }
+                }
+
+                // Auto-zoom toggle
+                Button {
+                    id: autoZoomBtn
+                    Layout.fillWidth: true
+                    text: mapView && mapView.lodAutoZoom ? i18n.t("rightpanel.autozoom.on") : i18n.t("rightpanel.autozoom.off")
+                    onClicked: {
+                        if (mapView) mapView.lodAutoZoom = !mapView.lodAutoZoom
+                    }
+                    contentItem: Text {
+                        text: mapView && mapView.lodAutoZoom ? i18n.t("rightpanel.autozoom.on") : i18n.t("rightpanel.autozoom.off")
+                        color: (mapView && mapView.lodAutoZoom) ? theme.accentColor : theme.subTextColor
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: 12
+                        font.weight: Font.Medium
+                    }
+                    background: Rectangle {
+                        implicitHeight: 38
+                        radius: 10
+                        color: (mapView && mapView.lodAutoZoom) ? theme.activePill : (autoZoomBtn.hovered ? theme.buttonHover : "transparent")
+                        border.color: (mapView && mapView.lodAutoZoom) ? Qt.rgba(theme.accentColor.r, theme.accentColor.g, theme.accentColor.b, 0.4) : (autoZoomBtn.hovered ? theme.panelBorder : "transparent")
+                        border.width: 1
+                    }
                 }
             }
 
@@ -284,7 +272,7 @@ Item {
                 Layout.fillWidth: true
 
                 Text {
-                    text: "Node Color"
+                    text: i18n.t("rightpanel.nodeColor")
                     color: theme.subTextColor
                     font.pixelSize: 12
                     Layout.fillWidth: true
@@ -314,7 +302,7 @@ Item {
                 Layout.fillWidth: true
 
                 Text {
-                    text: "Edge Core Color"
+                    text: i18n.t("rightpanel.edgeColor")
                     color: theme.subTextColor
                     font.pixelSize: 12
                     Layout.fillWidth: true

@@ -12,6 +12,7 @@
 #include <QTimer>
 #include <QElapsedTimer>
 #include "../core/DataModel/Graph.h"
+#include "../core/modules/algorithm.h"
 
 #include <QSGTransformNode>
 
@@ -21,10 +22,10 @@ class MapView : public QQuickItem {
     // 缩放和平移属性，供 QML 交互使用
     Q_PROPERTY(double zoom READ zoom WRITE setZoom NOTIFY zoomChanged)
     Q_PROPERTY(QPointF offset READ offset WRITE setOffset NOTIFY offsetChanged)
-    // LOD 开关：true = 随缩放动态调整节点数；false = 全量显示
-    Q_PROPERTY(bool lodEnabled READ lodEnabled WRITE setLodEnabled NOTIFY lodEnabledChanged)
-    // LOD 细节倍率：直接控制显示的节点密度（0.2 = 稀疏, 5.0 = 密集，默认 1.0）
+    // LOD 细节倍率：控制显示的节点密度（0.0 = 全量显示, 3.0 = 极度稀疏）
     Q_PROPERTY(double lodIntensity READ lodIntensity WRITE setLodIntensity NOTIFY lodIntensityChanged)
+    // 是否随缩放自动调整 LOD
+    Q_PROPERTY(bool lodAutoZoom READ lodAutoZoom WRITE setLodAutoZoom NOTIFY lodAutoZoomChanged)
 // ... rest of the properties are unchanged ...
     Q_PROPERTY(int hoveredEdgeSource READ hoveredEdgeSource WRITE setHoveredEdgeSource NOTIFY hoveredEdgeChanged)
     Q_PROPERTY(int hoveredEdgeTarget READ hoveredEdgeTarget WRITE setHoveredEdgeTarget NOTIFY hoveredEdgeChanged)
@@ -37,6 +38,7 @@ class MapView : public QQuickItem {
     Q_PROPERTY(double edgeCoreAlpha READ edgeCoreAlpha WRITE setEdgeCoreAlpha NOTIFY styleChanged)
     Q_PROPERTY(double edgeGlowAlpha READ edgeGlowAlpha WRITE setEdgeGlowAlpha NOTIFY styleChanged)
     Q_PROPERTY(double edgeGlowWidthScale READ edgeGlowWidthScale WRITE setEdgeGlowWidthScale NOTIFY styleChanged)
+    Q_PROPERTY(QColor virtualEdgeColor READ virtualEdgeColor WRITE setVirtualEdgeColor NOTIFY styleChanged)
 
     Q_PROPERTY(QColor nodeCoreColor READ nodeCoreColor WRITE setNodeCoreColor NOTIFY styleChanged)
     Q_PROPERTY(QColor nodeGlowColor READ nodeGlowColor WRITE setNodeGlowColor NOTIFY styleChanged)
@@ -52,6 +54,11 @@ class MapView : public QQuickItem {
     Q_PROPERTY(QString selectionMode READ selectionMode NOTIFY selectionChanged)
     Q_PROPERTY(QColor selectionAccent READ selectionAccent WRITE setSelectionAccent NOTIFY styleChanged)
 
+    Q_PROPERTY(bool routeMode READ routeMode WRITE setRouteMode NOTIFY routeModeChanged)
+    Q_PROPERTY(int routeStartNodeId READ routeStartNodeId NOTIFY routeChanged)
+    Q_PROPERTY(int routeEndNodeId READ routeEndNodeId NOTIFY routeChanged)
+    Q_PROPERTY(QColor pathHighlightColor READ pathHighlightColor WRITE setPathHighlightColor NOTIFY styleChanged)
+
 public:
     explicit MapView(QQuickItem *parent = nullptr);
     ~MapView() override;
@@ -66,6 +73,19 @@ public:
     Q_INVOKABLE QVariantMap selectNode(int nodeId);
     Q_INVOKABLE QVariantMap selectEdge(int source, int target);
     Q_INVOKABLE void clearSelection();
+
+    bool routeMode() const { return m_routeMode; }
+    void setRouteMode(bool active);
+    int routeStartNodeId() const { return m_routeStartNodeId; }
+    int routeEndNodeId() const { return m_routeEndNodeId; }
+    Q_INVOKABLE void selectRouteNode(int nodeId);
+    Q_INVOKABLE void clearRoute();
+    Q_INVOKABLE QVariantMap getPathInfo() const;
+
+    QColor pathHighlightColor() const { return m_pathHighlightColor; }
+    void setPathHighlightColor(const QColor& c) {
+        if (m_pathHighlightColor != c) { m_pathHighlightColor = c; m_selectionDirty = true; emit styleChanged(); update(); }
+    }
 
     Q_INVOKABLE void addZoomVelocity(double delta);
     void reclampOffset();
@@ -90,20 +110,20 @@ public:
     QPointF offset() const { return m_offset; }
     void setOffset(const QPointF& o);
 
-    bool lodEnabled() const { return m_lodEnabled; }
-    void setLodEnabled(bool v) {
-        if (m_lodEnabled != v) { m_lodEnabled = v; emit lodEnabledChanged(); update(); }
-    }
-
     double lodIntensity() const { return m_lodIntensity; }
     void setLodIntensity(double v) {
-        double clamped = std::clamp(v, 0.2, 5.0);
+        double clamped = std::clamp(v, 0.0, 3.0);
         if (!qFuzzyCompare(m_lodIntensity, clamped)) {
             m_lodIntensity = clamped;
-            m_bakedLodZoom = -1.0; // force LOD recalculation on next render
+            m_bakedLodZoom = -1.0;
             emit lodIntensityChanged();
             update();
         }
+    }
+
+    bool lodAutoZoom() const { return m_lodAutoZoom; }
+    void setLodAutoZoom(bool v) {
+        if (m_lodAutoZoom != v) { m_lodAutoZoom = v; m_bakedLodZoom = -1.0; emit lodAutoZoomChanged(); update(); }
     }
 
     int hoveredEdgeSource() const { return m_hoveredEdgeSource; }
@@ -156,6 +176,11 @@ public:
         if (!qFuzzyCompare(m_edgeGlowWidthScale, v)) { m_edgeGlowWidthScale = v; m_styleDirty = true; emit styleChanged(); update(); }
     }
 
+    QColor virtualEdgeColor() const { return m_virtualEdgeColor; }
+    void setVirtualEdgeColor(const QColor& c) {
+        if (m_virtualEdgeColor != c) { m_virtualEdgeColor = c; m_styleDirty = true; emit styleChanged(); update(); }
+    }
+
     QColor nodeCoreColor() const { return m_nodeCoreColor; }
     void setNodeCoreColor(const QColor& c) {
         if (m_nodeCoreColor != c) { m_nodeCoreColor = c; m_styleDirty = true; emit styleChanged(); update(); }
@@ -185,13 +210,16 @@ signals:
     void graphChanged();
     void zoomChanged();
     void offsetChanged();
-    void lodEnabledChanged();
     void lodIntensityChanged();
+    void lodAutoZoomChanged();
     void hoveredEdgeChanged();
     void styleChanged();
     void momentumActiveChanged();
     void selectionChanged();
     void selectionInfoReady(QVariantMap info);
+    void routeChanged();
+    void routeModeChanged();
+    void pathResultReady(QVariantMap info);
 
 protected:
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
@@ -199,8 +227,8 @@ protected:
 private:
     Graph* m_graph = nullptr;
     double m_zoom = 1.0;
-    bool   m_lodEnabled  = true;   // 默认开启 LOD
-    double m_lodIntensity = 1.0;   // 默认细节倍率
+    double m_lodIntensity = 1.0;
+    bool   m_lodAutoZoom  = true;
     QPointF m_offset = QPointF(0, 0);
 
     int m_hoveredEdgeSource = -1;
@@ -214,6 +242,7 @@ private:
     double m_edgeCoreAlpha = 0.95;
     double m_edgeGlowAlpha = 0.32;
     double m_edgeGlowWidthScale = 1.9;
+    QColor m_virtualEdgeColor = QColor(128, 128, 128);
 
     QColor m_nodeCoreColor = QColor(20, 30, 46);
     QColor m_nodeGlowColor = QColor(25, 51, 76);
@@ -231,6 +260,7 @@ private:
         int v;
         double ratio;
         int capacity;
+        bool isDirect;
     };
     std::vector<LogicalEdge> m_cachedLogicalEdges;
     int m_cachedVisibleCount = -1;
@@ -281,6 +311,14 @@ private:
     int m_selectedEdgeTarget = -1;
     bool m_selectionDirty = false;
     QColor m_selectionAccent = QColor(59, 130, 246);
+
+    // Route mode state
+    bool m_routeMode = false;
+    int m_routeStartNodeId = -1;
+    int m_routeEndNodeId = -1;
+    PathResult m_pathResult;
+    bool m_pathDirty = false;
+    QColor m_pathHighlightColor = QColor(251, 191, 36);
 
     // Edge-click endpoint highlight
     std::unordered_set<int> m_highlightedNodeIds;

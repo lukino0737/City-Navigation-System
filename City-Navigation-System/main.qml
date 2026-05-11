@@ -8,9 +8,12 @@ Window {
     width: 1280
     height: 800
     visible: true
-    title: qsTr("City Navigation System - Premium Edition")
-    color: theme.bgColor 
-    
+    title: i18n.t("app.windowTitle")
+    color: theme.bgColor
+    flags: Qt.FramelessWindowHint | Qt.Window
+    minimumWidth: 960
+    minimumHeight: 640
+
     property bool globalIsGenerating: false
     property bool showingDetailPanel: false
     
@@ -19,6 +22,19 @@ Window {
         function onGraphRegenerated() {
             globalIsGenerating = false
             if (mapView) mapView.update()
+        }
+    }
+
+    Connections {
+        target: mapView
+        function onPathResultReady(info) {
+            detailPanel.showInfo(info)
+            showingDetailPanel = true
+        }
+        function onRouteModeChanged() {
+            if (!mapView.routeMode) {
+                showingDetailPanel = false
+            }
         }
     }
 
@@ -82,7 +98,7 @@ Window {
             mapPalette.nodeGlow = "#0f172a"
             mapPalette.edgeGlowAlpha = 0.15
         }
-        
+
         function setCyberTheme() {
             bgColor = "#0f0914"
             textColor = "#e0f2fe"
@@ -118,12 +134,178 @@ Window {
         property real edgeCoreAlpha: 0.95
         property real edgeGlowAlpha: 0.28
         property real edgeGlowWidthScale: 1.9
+        property color virtualEdgeColor: "#808080"
 
         property color nodeCore: "#00ffff"
         property color nodeGlow: "#0f0f12"
         property real nodeCoreAlpha: 0.98
         property real nodeGlowAlpha: 0.5
         property real nodeGlowSizeScale: 2.0
+    }
+
+    // ── Localization Manager ──────────────────────────────────────────────
+    QtObject {
+        id: i18n
+
+        property string language: "zh"
+
+        property var _en: ({
+            "app.title": "City Navigation System",
+            "app.windowTitle": "City Navigation System - Premium Edition",
+            "loading.title": "Generating Network...",
+            "loading.subtitle": "10,000 Nodes | Prim's Algorithm",
+            "tooltip.node": "NODE %1\n%2, %3",
+            "tooltip.edge": "%1 ↔ %2\nCAPACITY: %3\nLENGTH: %4",
+            "sidebar.view": "Panoramic View",
+            "sidebar.traffic": "Traffic Dynamics",
+            "sidebar.route": "Smart Routing",
+            "sidebar.settings": "Settings",
+            "rightpanel.header": "NAVIGATION",
+            "rightpanel.title": "Control Center",
+            "rightpanel.nodes": "Total Nodes",
+            "rightpanel.zoom": "Zoom Level",
+            "rightpanel.regen": "Regenerate Network",
+            "rightpanel.generating": "Generating...",
+            "rightpanel.lod": "LOD Intensity",
+            "rightpanel.lod.full": "Full",
+            "rightpanel.lod.soft": "Soft",
+            "rightpanel.lod.bal": "Balanced",
+            "rightpanel.lod.agg": "Aggressive",
+            "rightpanel.autozoom.on": "Auto-Zoom LOD: ON",
+            "rightpanel.autozoom.off": "Auto-Zoom LOD: OFF",
+            "rightpanel.nodeColor": "Node Color",
+            "rightpanel.edgeColor": "Edge Core Color",
+            "settings.header": "PREFERENCES",
+            "settings.title": "System Settings",
+            "settings.theme": "Visual Theme",
+            "settings.theme.dark": "Deep Space",
+            "settings.theme.light": "Alabaster",
+            "settings.theme.cyber": "Neon Obsidian",
+            "settings.language": "Language",
+            "settings.lang.zh": "中文",
+            "settings.lang.en": "English",
+            "settings.dismiss": "Dismiss",
+            "detail.header.node": "NODE DETAILS",
+            "detail.header.edge": "EDGE DETAILS",
+            "detail.header.path": "ROUTE DETAILS",
+            "detail.title.node": "Intersection #%1",
+            "detail.title.edge": "Connection %1 ↔ %2",
+            "detail.title.path.ok": "Route %1 → %2",
+            "detail.title.path.fail": "No path found",
+            "detail.node.id": "Node ID",
+            "detail.node.x": "Position X",
+            "detail.node.y": "Position Y",
+            "detail.node.degree": "Degree",
+            "detail.edge.source": "Source ID",
+            "detail.edge.target": "Target ID",
+            "detail.edge.capacity": "Capacity",
+            "detail.edge.length": "Length",
+            "detail.path.start": "Start Node",
+            "detail.path.end": "End Node",
+            "detail.path.cost": "Total Cost",
+            "detail.path.hops": "Hops",
+            "detail.path.nodes": "Nodes in Path",
+            "detail.path.time": "Compute Time",
+            "detail.path.result": "Result",
+            "detail.path.timeUnit": " ms",
+            "detail.path.noRoute": "No route found between these nodes",
+            "viewswitcher.controls": "Controls",
+            "viewswitcher.details": "Details"
+        })
+
+        property var _zh: ({
+            "app.title": "城市导航系统",
+            "app.windowTitle": "城市导航系统",
+            "loading.title": "正在生成网络...",
+            "loading.subtitle": "10,000 个节点 | Prim 算法",
+            "tooltip.node": "节点 %1\n%2, %3",
+            "tooltip.edge": "%1 ↔ %2\n容量: %3\n长度: %4",
+            "sidebar.view": "全景视图",
+            "sidebar.traffic": "车流动态",
+            "sidebar.route": "智能寻路",
+            "sidebar.settings": "系统设定",
+            "rightpanel.header": "导航",
+            "rightpanel.title": "控制中心",
+            "rightpanel.nodes": "节点总数",
+            "rightpanel.zoom": "缩放级别",
+            "rightpanel.regen": "重新生成网络",
+            "rightpanel.generating": "生成中...",
+            "rightpanel.lod": "LOD 强度",
+            "rightpanel.lod.full": "完整",
+            "rightpanel.lod.soft": "柔和",
+            "rightpanel.lod.bal": "均衡",
+            "rightpanel.lod.agg": "激进",
+            "rightpanel.autozoom.on": "自动缩放 LOD: 开",
+            "rightpanel.autozoom.off": "自动缩放 LOD: 关",
+            "rightpanel.nodeColor": "节点颜色",
+            "rightpanel.edgeColor": "边核心颜色",
+            "settings.header": "首选项",
+            "settings.title": "系统设置",
+            "settings.theme": "视觉主题",
+            "settings.theme.dark": "深空",
+            "settings.theme.light": "雪花石膏",
+            "settings.theme.cyber": "霓虹黑曜",
+            "settings.language": "语言",
+            "settings.lang.zh": "中文",
+            "settings.lang.en": "English",
+            "settings.dismiss": "关闭",
+            "detail.header.node": "节点详情",
+            "detail.header.edge": "边详情",
+            "detail.header.path": "路径详情",
+            "detail.title.node": "节点 #%1",
+            "detail.title.edge": "连接 %1 ↔ %2",
+            "detail.title.path.ok": "路径 %1 → %2",
+            "detail.title.path.fail": "未找到路径",
+            "detail.node.id": "节点 ID",
+            "detail.node.x": "横坐标",
+            "detail.node.y": "纵坐标",
+            "detail.node.degree": "度",
+            "detail.edge.source": "起点 ID",
+            "detail.edge.target": "终点 ID",
+            "detail.edge.capacity": "容量",
+            "detail.edge.length": "长度",
+            "detail.path.start": "起点",
+            "detail.path.end": "终点",
+            "detail.path.cost": "总代价",
+            "detail.path.hops": "跳数",
+            "detail.path.nodes": "路径节点数",
+            "detail.path.time": "计算时间",
+            "detail.path.result": "结果",
+            "detail.path.timeUnit": " 毫秒",
+            "detail.path.noRoute": "未找到连接这两个节点的路径",
+            "viewswitcher.controls": "控制面板",
+            "viewswitcher.details": "详情"
+        })
+
+        // Pre-built model arrays so ComboBox model bindings avoid t() calls
+        property var themeModel: language === "zh"
+            ? [_zh["settings.theme.dark"], _zh["settings.theme.light"], _zh["settings.theme.cyber"]]
+            : [_en["settings.theme.dark"], _en["settings.theme.light"], _en["settings.theme.cyber"]]
+
+        property var langModel: language === "zh"
+            ? [_zh["settings.lang.zh"], _zh["settings.lang.en"]]
+            : [_en["settings.lang.zh"], _en["settings.lang.en"]]
+
+        function t(key) {
+            var map = language === "zh" ? _zh : _en
+            var text = map[key]
+            if (text === undefined) return key
+            for (var i = 1; i < arguments.length; i++) {
+                text = text.replace("%" + i, arguments[i])
+            }
+            return text
+        }
+    }
+
+    // ── Custom Acrylic Title Bar ───────────────────────────────────────
+    TitleBar {
+        id: titleBar
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        z: 20
+        targetWindow: mainWindow
+        blurSource: mapContainer
     }
 
         // Core Map Rendering Container
@@ -149,6 +331,7 @@ Window {
             edgeCoreAlpha: mapPalette.edgeCoreAlpha
             edgeGlowAlpha: mapPalette.edgeGlowAlpha
             edgeGlowWidthScale: mapPalette.edgeGlowWidthScale
+            virtualEdgeColor: mapPalette.virtualEdgeColor
             nodeCoreColor: mapPalette.nodeCore
             nodeGlowColor: mapPalette.nodeGlow
             nodeCoreAlpha: mapPalette.nodeCoreAlpha
@@ -173,7 +356,7 @@ Window {
                     if (hoveredNodePos.found) {
                         nodeTooltip.x = mx + 20
                         nodeTooltip.y = my + 20
-                        tooltipText.text = "NODE " + hoveredNodePos.id + "\n" + hoveredNodePos.x + ", " + hoveredNodePos.y
+                        tooltipText.text = i18n.t("tooltip.node", hoveredNodePos.id, hoveredNodePos.x, hoveredNodePos.y)
                         nodeTooltip.visible = true
                         
                         let screenPos = mapView.mapToScreen(hoveredNodePos.x, hoveredNodePos.y)
@@ -191,7 +374,7 @@ Window {
                     if (hoveredEdge.found) {
                         nodeTooltip.x = mx + 20
                         nodeTooltip.y = my + 20
-                        tooltipText.text = hoveredEdge.source + " ↔ " + hoveredEdge.target + "\nCAPACITY: " + hoveredEdge.capacity + "\nLENGTH: " + hoveredEdge.length.toFixed(1)
+                        tooltipText.text = i18n.t("tooltip.edge", hoveredEdge.source, hoveredEdge.target, hoveredEdge.capacity, hoveredEdge.length.toFixed(1))
                         nodeTooltip.visible = true
                         
                         hoverNodeIndicator.visible = false
@@ -239,6 +422,20 @@ Window {
                 }
 
                 function handleMapClick(mx, my) {
+                    // Route mode: two-click node selection for pathfinding
+                    if (mapView.routeMode) {
+                        let nodeHit = mapView.hitTestNode(Qt.point(mx, my), 12.0)
+                        if (nodeHit.found) {
+                            mapView.selectRouteNode(nodeHit.id)
+                            showingDetailPanel = true
+                            return
+                        }
+                        mapView.clearRoute()
+                        showingDetailPanel = false
+                        return
+                    }
+
+                    // View mode: single-selection for node/edge details
                     let nodeHit = mapView.hitTestNode(Qt.point(mx, my), 12.0)
                     if (nodeHit.found) {
                         let info = mapView.selectNode(nodeHit.id)
@@ -336,14 +533,14 @@ Window {
                     spacing: 8
                     anchors.horizontalCenter: parent.horizontalCenter
                     Text {
-                        text: "Generating Network..."
+                        text: i18n.t("loading.title")
                         color: theme.textColor
                         font.pixelSize: 18
                         font.weight: Font.Medium
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
                     Text {
-                        text: "10,000 Nodes | Prim's Algorithm"
+                        text: i18n.t("loading.subtitle")
                         color: theme.subTextColor
                         font.pixelSize: 12
                         font.letterSpacing: 2
@@ -412,7 +609,7 @@ Window {
         anchors.left: parent.left
         anchors.leftMargin: 24
         anchors.top: parent.top
-        anchors.topMargin: 24
+        anchors.topMargin: 64
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 24
         z: 10
@@ -424,8 +621,8 @@ Window {
     // Floating Right Dashboard
     RightPanel {
         id: rightPanel
-        y: 24
-        height: parent.height - 48
+        y: 64
+        height: parent.height - 88
         z: 10
         mapView: mapView
         blurTarget: mapContainer
@@ -445,9 +642,9 @@ Window {
 
     DetailPanel {
         id: detailPanel
-        y: 24
+        y: 64
         width: 340
-        height: parent.height - 48
+        height: parent.height - 88
         z: 11
         blurTarget: mapContainer
         

@@ -28,8 +28,6 @@ set(PROJECT_SOURCES
     src/core/DataModel/Graph.cpp
     src/core/modules/DataGenerator.h
     src/core/modules/DataGenerator.cpp
-    src/core/modules/PathFinder.h
-    src/core/modules/PathFinder.cpp
     src/core/modules/SpatialSearch.h
     src/core/modules/SpatialSearch.cpp
     src/core/modules/TrafficSimulator.h
@@ -58,6 +56,7 @@ if(QT_VERSION VERSION_GREATER_EQUAL 6.2)
         QML_FILES
             main.qml
             GlassPanel.qml
+            TitleBar.qml
             Sidebar.qml
             RightPanel.qml
             SettingsDialog.qml

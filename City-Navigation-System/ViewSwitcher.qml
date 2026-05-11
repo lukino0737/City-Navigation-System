@@ -41,7 +41,7 @@ Item {
                 
                 Text {
                     anchors.centerIn: parent
-                    text: "Controls"
+                    text: i18n.t("viewswitcher.controls")
                     color: root.currentIndex === 0 ? theme.accentColor : theme.subTextColor
                     font.pixelSize: 13
                     font.weight: root.currentIndex === 0 ? Font.Bold : Font.Medium
@@ -68,7 +68,7 @@ Item {
                 
                 Text {
                     anchors.centerIn: parent
-                    text: "Details"
+                    text: i18n.t("viewswitcher.details")
                     color: root.currentIndex === 1 ? theme.accentColor : theme.subTextColor
                     font.pixelSize: 13
                     font.weight: root.currentIndex === 1 ? Font.Bold : Font.Medium
