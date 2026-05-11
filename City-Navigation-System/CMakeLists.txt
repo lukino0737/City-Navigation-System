@@ -38,7 +38,8 @@ set(PROJECT_SOURCES
     src/gui/MainWindow.cpp
     src/gui/MapView.h
     src/gui/MapView.cpp
-    src/core/algorithm/algorithm.cpp
+    src/core/modules/algorithm.h
+    src/core/modules/algorithm.cpp
 )
 
 if(QT_VERSION VERSION_LESS 5.15)
