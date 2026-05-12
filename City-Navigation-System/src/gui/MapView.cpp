@@ -86,6 +86,7 @@ QVariantMap MapView::hitTestNode(const QPointF& screenPos, double tolerance) con
         result["id"] = bestNode->Node_id;
         result["x"] = bestNode->x;
         result["y"] = bestNode->y;
+        result["name"] = QString::fromStdString(bestNode->name);
     } else {
         result["found"] = false;
     }
@@ -169,6 +170,7 @@ QVariantMap MapView::selectNode(int nodeId) {
     info["id"] = n.Node_id;
     info["x"] = n.x;
     info["y"] = n.y;
+    info["name"] = QString::fromStdString(n.name);
     info["degree"] = static_cast<int>(m_graph->getEdgesFrom(nodeId).size());
 
     emit selectionChanged();
@@ -303,16 +305,21 @@ QVariantMap MapView::getPathInfo() const {
     info["found"] = true;
     info["startId"] = m_routeStartNodeId;
     info["endId"] = m_routeEndNodeId;
+    info["startName"] = QString::fromStdString(m_graph->getNode(m_routeStartNodeId).name);
+    info["endName"] = QString::fromStdString(m_graph->getNode(m_routeEndNodeId).name);
     info["totalCost"] = m_pathResult.total_cost;
     info["hopCount"] = static_cast<int>(m_pathResult.path_nodes.size()) - 1;
     info["nodeCount"] = static_cast<int>(m_pathResult.path_nodes.size());
     info["timeMs"] = m_pathResult.time_spent_ms;
 
     QVariantList nodeList;
+    QVariantList nodeNameList;
     for (int nid : m_pathResult.path_nodes) {
         nodeList.append(nid);
+        nodeNameList.append(QString::fromStdString(m_graph->getNode(nid).name));
     }
     info["pathNodeIds"] = nodeList;
+    info["pathNodeNames"] = nodeNameList;
     return info;
 }
 

@@ -195,6 +195,7 @@ Window {
             "detail.title.path.ok": "Route %1 → %2",
             "detail.title.path.fail": "No path found",
             "detail.node.id": "Node ID",
+            "detail.node.name": "Name",
             "detail.node.x": "Position X",
             "detail.node.y": "Position Y",
             "detail.node.degree": "Degree",
@@ -203,7 +204,9 @@ Window {
             "detail.edge.capacity": "Capacity",
             "detail.edge.length": "Length",
             "detail.path.start": "Start Node",
+            "detail.path.startName": "Start Name",
             "detail.path.end": "End Node",
+            "detail.path.endName": "End Name",
             "detail.path.cost": "Total Cost",
             "detail.path.hops": "Hops",
             "detail.path.nodes": "Nodes in Path",
@@ -211,6 +214,7 @@ Window {
             "detail.path.result": "Result",
             "detail.path.timeUnit": " ms",
             "detail.path.noRoute": "No route found between these nodes",
+            "detail.path.namedNodes": "Named Waypoints",
             "viewswitcher.controls": "Controls",
             "viewswitcher.details": "Details"
         })
@@ -219,7 +223,7 @@ Window {
             "app.title": "城市导航系统",
             "app.windowTitle": "城市导航系统",
             "loading.title": "正在加载地图...",
-            "loading.subtitle": "10,000 个节点 | Prim 算法",
+            "loading.subtitle": "10,000 个节点",
             "tooltip.node": "节点 %1\n%2, %3",
             "tooltip.edge": "%1 ↔ %2\n容量: %3\n长度: %4",
             "sidebar.simulation": "模拟地图",
@@ -260,6 +264,7 @@ Window {
             "detail.title.path.ok": "路径 %1 → %2",
             "detail.title.path.fail": "未找到路径",
             "detail.node.id": "节点 ID",
+            "detail.node.name": "地名",
             "detail.node.x": "横坐标",
             "detail.node.y": "纵坐标",
             "detail.node.degree": "度",
@@ -268,7 +273,9 @@ Window {
             "detail.edge.capacity": "容量",
             "detail.edge.length": "长度",
             "detail.path.start": "起点",
+            "detail.path.startName": "起点地名",
             "detail.path.end": "终点",
+            "detail.path.endName": "终点地名",
             "detail.path.cost": "总代价",
             "detail.path.hops": "跳数",
             "detail.path.nodes": "路径节点数",
@@ -276,6 +283,7 @@ Window {
             "detail.path.result": "结果",
             "detail.path.timeUnit": " 毫秒",
             "detail.path.noRoute": "未找到连接这两个节点的路径",
+            "detail.path.namedNodes": "途经有名路口",
             "viewswitcher.controls": "控制面板",
             "viewswitcher.details": "详情"
         })
@@ -359,7 +367,11 @@ Window {
                     if (hoveredNodePos.found) {
                         nodeTooltip.x = mx + 20
                         nodeTooltip.y = my + 20
-                        tooltipText.text = i18n.t("tooltip.node", hoveredNodePos.id, hoveredNodePos.x, hoveredNodePos.y)
+                        var nodeText = i18n.t("tooltip.node", hoveredNodePos.id, hoveredNodePos.x, hoveredNodePos.y)
+                        if (hoveredNodePos.name && hoveredNodePos.name !== "") {
+                            nodeText = hoveredNodePos.name + "\n" + nodeText
+                        }
+                        tooltipText.text = nodeText
                         nodeTooltip.visible = true
                         
                         let screenPos = mapView.mapToScreen(hoveredNodePos.x, hoveredNodePos.y)

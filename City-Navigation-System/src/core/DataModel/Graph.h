@@ -62,6 +62,6 @@ public:
     const std::vector<Node>& getAllNodes();
     const std::vector<Edge>& getAllEdges();
 
-    bool addNode(int id, int x, int y);
+    bool addNode(int id, int x, int y, const std::string& name = "");
     bool addEdge(int id, int source, int target, double length, double capacity);
 };

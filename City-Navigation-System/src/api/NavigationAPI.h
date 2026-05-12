@@ -11,6 +11,7 @@ struct Node {
     int Node_id;
     double x;
     double y;
+    std::string name;
 };
 
 struct Edge {
@@ -40,12 +41,14 @@ namespace nlohmann {
     template <>
     struct adl_serializer<Node> {
         static void to_json(json& j, const Node& p) {
-            j = json{{"id", p.Node_id}, {"x", p.x}, {"y", p.y}};
+            j = json{{"id", p.Node_id}, {"x", p.x}, {"y", p.y}, {"name", p.name}};
         }
         static void from_json(const json& j, Node& p) {
             j.at("id").get_to(p.Node_id);
             j.at("x").get_to(p.x);
             j.at("y").get_to(p.y);
+            if (j.contains("name") && j["name"].is_string())
+                p.name = j["name"].get<std::string>();
         }
     };
 

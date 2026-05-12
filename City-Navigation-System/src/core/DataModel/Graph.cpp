@@ -39,7 +39,10 @@ bool Graph::load(std::string filePath) {
     m_edgeIdToIndex.clear();
 
     for (const auto& item : j["nodes"]) {
-        addNode(item["id"], item["x"], item["y"]);
+        std::string name;
+        if (item.contains("name") && item["name"].is_string())
+            name = item["name"].get<std::string>();
+        addNode(item["id"], item["x"], item["y"], name);
     }
     for (const auto& item : j["edges"]) {
         addEdge(item["id"], item["source"], item["target"], item["length"], item["capacity"]);
@@ -137,7 +140,10 @@ void Graph::switchToMap(int index) {
         std::vector<Node> newNodes;
         std::vector<Edge> newEdges;
         for (const auto& item : j["nodes"]) {
-            newNodes.push_back({item["id"], item["x"], item["y"]});
+            std::string name;
+            if (item.contains("name") && item["name"].is_string())
+                name = item["name"].get<std::string>();
+            newNodes.push_back({item["id"], item["x"], item["y"], name});
         }
         for (const auto& item : j["edges"]) {
             newEdges.push_back({item["id"], item["source"], item["target"],
@@ -185,7 +191,7 @@ Node Graph::getNode(int id) {
     if (it != m_nodeIdToIndex.end()) {
         return m_nodes[it->second];
     }
-    return Node{ -1, 0, 0 };
+    return Node{ -1, 0, 0, "" };
 }
 
 std::vector<Edge>& Graph::getEdgesFrom(int nodeId) {
@@ -215,8 +221,8 @@ const std::vector<Edge>& Graph::getAllEdges() {
     return m_edges;
 }
 
-bool Graph::addNode(int id, int x, int y) {
-    m_nodes.push_back(Node{ id, x, y });
+bool Graph::addNode(int id, int x, int y, const std::string& name) {
+    m_nodes.push_back(Node{ id, x, y, name });
     m_nodeIdToIndex[id] = m_nodes.size() - 1;
     return true;
 }

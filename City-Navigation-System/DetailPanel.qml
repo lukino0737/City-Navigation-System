@@ -84,6 +84,10 @@ Item {
                             var rows = []
                             if (infoData.type === "node") {
                                 rows.push({label: i18n.t("detail.node.id"),    value: infoData.id || "—"})
+                                var nodeName = infoData.name
+                                if (nodeName && nodeName !== "") {
+                                    rows.push({label: i18n.t("detail.node.name"), value: nodeName})
+                                }
                                 rows.push({label: i18n.t("detail.node.x"), value: (infoData.x !== undefined ? infoData.x.toFixed(2) : "—")})
                                 rows.push({label: i18n.t("detail.node.y"), value: (infoData.y !== undefined ? infoData.y.toFixed(2) : "—")})
                                 rows.push({label: i18n.t("detail.node.degree"),     value: infoData.degree !== undefined ? infoData.degree : "—"})
@@ -95,11 +99,32 @@ Item {
                             } else if (infoData.type === "path") {
                                 if (infoData.found) {
                                     rows.push({label: i18n.t("detail.path.start"),   value: infoData.startId || "—"})
+                                    var startName = infoData.startName
+                                    if (startName && startName !== "") {
+                                        rows.push({label: i18n.t("detail.path.startName"), value: startName})
+                                    }
                                     rows.push({label: i18n.t("detail.path.end"),     value: infoData.endId || "—"})
+                                    var endName = infoData.endName
+                                    if (endName && endName !== "") {
+                                        rows.push({label: i18n.t("detail.path.endName"), value: endName})
+                                    }
                                     rows.push({label: i18n.t("detail.path.cost"),   value: infoData.totalCost !== undefined ? infoData.totalCost.toFixed(2) : "—"})
                                     rows.push({label: i18n.t("detail.path.hops"),         value: infoData.hopCount !== undefined ? infoData.hopCount : "—"})
                                     rows.push({label: i18n.t("detail.path.nodes"), value: infoData.nodeCount !== undefined ? infoData.nodeCount : "—"})
                                     rows.push({label: i18n.t("detail.path.time"), value: infoData.timeMs !== undefined ? infoData.timeMs.toFixed(2) + i18n.t("detail.path.timeUnit") : "—"})
+                                    // List named waypoints in the path
+                                    var namedWaypoints = []
+                                    if (infoData.pathNodeNames && infoData.pathNodeIds) {
+                                        for (var pni = 0; pni < infoData.pathNodeNames.length; pni++) {
+                                            var pname = infoData.pathNodeNames[pni]
+                                            if (pname && pname !== "") {
+                                                namedWaypoints.push(pname + " (#" + infoData.pathNodeIds[pni] + ")")
+                                            }
+                                        }
+                                    }
+                                    if (namedWaypoints.length > 0) {
+                                        rows.push({label: i18n.t("detail.path.namedNodes"), value: namedWaypoints.join(" → ")})
+                                    }
                                 } else {
                                     rows.push({label: i18n.t("detail.path.start"), value: infoData.startId || "—"})
                                     rows.push({label: i18n.t("detail.path.end"),   value: infoData.endId || "—"})
