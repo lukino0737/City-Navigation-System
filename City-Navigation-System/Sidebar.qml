@@ -7,7 +7,10 @@ Item {
 
     property var mapView: null
     property Item blurTarget: null
+    property string currentPage: "simulation"
     signal settingsClicked()
+    signal simulationClicked()
+    signal realMapClicked()
 
     // 阻止鼠标事件穿透到下方的地图
     MouseArea {
@@ -104,17 +107,16 @@ Item {
         
         SidebarBtn {
             iconText: "⌘"
-            tipText: i18n.t("sidebar.view")
-            isActive: !root.mapView || !root.mapView.routeMode
-            onClicked: {
-                if (root.mapView) root.mapView.routeMode = false
-            }
+            tipText: i18n.t("sidebar.simulation")
+            isActive: root.currentPage === "simulation"
+            onClicked: root.simulationClicked()
         }
         SidebarBtn {
-            visible: false
+            visible: true
             iconText: "∿"
-            tipText: i18n.t("sidebar.traffic")
-            isActive: false
+            tipText: i18n.t("sidebar.realmap")
+            isActive: root.currentPage === "real"
+            onClicked: root.realMapClicked()
         }
         SidebarBtn {
             iconText: "↬"

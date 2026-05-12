@@ -2,6 +2,11 @@
 #include <fstream>
 #include <iomanip>
 #include <thread>
+#include <QCoreApplication>
+#include <QDir>
+#include <QDebug>
+#include <QFile>
+#include <QFileInfo>
 #include <QMetaObject>
 #include "../modules/DataGenerator.h"
 
@@ -50,6 +55,116 @@ void Graph::regenerateGraph(int nodeCount) {
                 emit this->graphRegenerated();
             }, Qt::QueuedConnection);
         }
+    }).detach();
+}
+
+void Graph::reloadSimulationMap() {
+    // Search upward from CWD to find map_data.json
+    QDir cwdDir = QDir::current();
+    while (!cwdDir.exists("map_data.json") && cwdDir.cdUp()) { }
+    QString path = cwdDir.exists("map_data.json")
+        ? cwdDir.absoluteFilePath("map_data.json")
+        : "map_data.json";
+
+    std::thread([this, path]() {
+        QMetaObject::invokeMethod(this, [this, path]() {
+            this->load(path.toStdString());
+            emit this->graphRegenerated();
+        }, Qt::QueuedConnection);
+    }).detach();
+}
+
+void Graph::refreshAvailableMaps() {
+    m_availableMaps.clear();
+    m_availableMapFiles.clear();
+
+    // Search upward from exe directory until we find map_data/
+    QDir dir(QCoreApplication::applicationDirPath());
+    while (!dir.exists("map_data") && dir.cdUp()) { }
+    if (dir.exists("map_data")) {
+        QDir mapDir(dir.absoluteFilePath("map_data"));
+        const auto files = mapDir.entryInfoList({"*.json"}, QDir::Files, QDir::Name);
+        for (const auto& info : files) {
+            m_availableMaps.append(info.completeBaseName());
+            m_availableMapFiles.append(info.absoluteFilePath());
+        }
+    }
+
+    // Also check map_data.json (generated map) — search upward from CWD
+    {
+        QDir cwdDir = QDir::current();
+        while (!cwdDir.exists("map_data.json") && cwdDir.cdUp()) { }
+        if (cwdDir.exists("map_data.json")) {
+            m_availableMaps.append("map_data");
+            m_availableMapFiles.append(cwdDir.absoluteFilePath("map_data.json"));
+        }
+    }
+
+    emit availableMapsChanged();
+}
+
+void Graph::switchToMap(int index) {
+    if (index < 0 || index >= m_availableMapFiles.size())
+        return;
+    if (index == m_currentMapIndex)
+        return;
+
+    QString filePath = m_availableMapFiles[index];
+
+    std::thread([this, filePath, index]() {
+        // Use QFile for Unicode path support (std::ifstream can't handle CJK paths on Windows)
+        QFile file(filePath);
+        if (!file.open(QIODevice::ReadOnly)) {
+            qWarning() << "switchToMap: failed to open" << filePath;
+            QMetaObject::invokeMethod(this, [this]() {
+                emit graphRegenerated();
+            }, Qt::QueuedConnection);
+            return;
+        }
+
+        QByteArray raw = file.readAll();
+        file.close();
+
+        json j = json::parse(raw.toStdString(), nullptr, false);
+        if (j.is_discarded()) {
+            qWarning() << "switchToMap: JSON parse failed for" << filePath;
+            QMetaObject::invokeMethod(this, [this]() {
+                emit graphRegenerated();
+            }, Qt::QueuedConnection);
+            return;
+        }
+
+        std::vector<Node> newNodes;
+        std::vector<Edge> newEdges;
+        for (const auto& item : j["nodes"]) {
+            newNodes.push_back({item["id"], item["x"], item["y"]});
+        }
+        for (const auto& item : j["edges"]) {
+            newEdges.push_back({item["id"], item["source"], item["target"],
+                               item["length"], item["capacity"], 0});
+        }
+
+        QMetaObject::invokeMethod(this, [this, index,
+                n = std::move(newNodes), e = std::move(newEdges)]() mutable {
+            m_nodes = std::move(n);
+            m_edges = std::move(e);
+
+            m_adjList.clear();
+            m_nodeIdToIndex.clear();
+            m_edgeIdToIndex.clear();
+
+            for (size_t i = 0; i < m_nodes.size(); ++i)
+                m_nodeIdToIndex[m_nodes[i].Node_id] = i;
+            for (size_t i = 0; i < m_edges.size(); ++i) {
+                m_edgeIdToIndex[m_edges[i].id] = i;
+                m_adjList[m_edges[i].source].push_back(m_edges[i]);
+            }
+
+            // Only update currentIndex on success, after data is swapped
+            m_currentMapIndex = index;
+            emit currentMapIndexChanged();
+            emit graphRegenerated();
+        }, Qt::QueuedConnection);
     }).detach();
 }
 

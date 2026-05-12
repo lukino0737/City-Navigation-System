@@ -1,5 +1,6 @@
 #pragma once
 #include <QObject>
+#include <QStringList>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -24,6 +25,11 @@ private:
     std::unordered_map<int, size_t> m_nodeIdToIndex; // 映射
     std::unordered_map<int, size_t> m_edgeIdToIndex; // 映射
 
+    // 地图文件管理
+    QStringList m_availableMaps;
+    QStringList m_availableMapFiles;
+    int m_currentMapIndex = -1;
+
 public:
     explicit Graph(QObject *parent = nullptr) : QObject(parent) {}
     ~Graph() override = default;
@@ -32,9 +38,19 @@ public:
     bool load(std::string filePath);
     bool save(std::string path);
     Q_INVOKABLE void regenerateGraph(int nodeCount = 10000);
-    
+    Q_INVOKABLE void reloadSimulationMap();
+
+    Q_PROPERTY(QStringList availableMaps READ availableMaps NOTIFY availableMapsChanged)
+    Q_PROPERTY(int currentMapIndex READ currentMapIndex NOTIFY currentMapIndexChanged)
+    Q_INVOKABLE void refreshAvailableMaps();
+    Q_INVOKABLE void switchToMap(int index);
+    QStringList availableMaps() const { return m_availableMaps; }
+    int currentMapIndex() const { return m_currentMapIndex; }
+
     signals:
     void graphRegenerated();
+    void availableMapsChanged();
+    void currentMapIndexChanged();
     
 public:
     // 数据操作接口

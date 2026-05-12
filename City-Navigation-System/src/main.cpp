@@ -27,14 +27,20 @@ int main(int argc, char *argv[])
     // 1. 注册 C++ 渲染组件到 QML
     qmlRegisterType<MapView>("Navigation", 1, 0, "MapView");
 
-    // 2. 准备地图数据
+    // 2. 准备地图数据：默认加载模拟地图
     Graph* globalGraph = new Graph(&app);
-    
-    // 如果没有地图文件，则生成一个包含 10,000 个节点的默认地图
+
     if (!globalGraph->load("map_data.json")) {
-        qDebug() << "Generating new map data (10,000 nodes)...";
+        qDebug() << "生成新的模拟地图 (10,000 节点)...";
         generateAndSaveMap(10000, "map_data.json");
         globalGraph->load("map_data.json");
+    }
+
+    // 预扫描真实地图目录，供 QML 下拉菜单使用
+    globalGraph->refreshAvailableMaps();
+    if (globalGraph->availableMaps().isEmpty()) {
+        qWarning() << "map_data/ 目录中未找到真实地图文件。"
+                       "请使用 scripts/osm_to_json.py 生成地图数据。";
     }
 
     QQmlApplicationEngine engine;

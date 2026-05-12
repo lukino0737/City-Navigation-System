@@ -16,6 +16,7 @@ Window {
 
     property bool globalIsGenerating: false
     property bool showingDetailPanel: false
+    property string currentPage: "simulation"
     
     Connections {
         target: globalGraph
@@ -156,8 +157,8 @@ Window {
             "loading.subtitle": "10,000 Nodes | Prim's Algorithm",
             "tooltip.node": "NODE %1\n%2, %3",
             "tooltip.edge": "%1 ↔ %2\nCAPACITY: %3\nLENGTH: %4",
-            "sidebar.view": "Panoramic View",
-            "sidebar.traffic": "Traffic Dynamics",
+            "sidebar.simulation": "Simulation",
+            "sidebar.realmap": "Real Map",
             "sidebar.route": "Smart Routing",
             "sidebar.settings": "Settings",
             "rightpanel.header": "NAVIGATION",
@@ -173,6 +174,7 @@ Window {
             "rightpanel.lod.agg": "Aggressive",
             "rightpanel.autozoom.on": "Auto-Zoom LOD: ON",
             "rightpanel.autozoom.off": "Auto-Zoom LOD: OFF",
+            "rightpanel.mapFile": "Current Map",
             "rightpanel.nodeColor": "Node Color",
             "rightpanel.edgeColor": "Edge Core Color",
             "settings.header": "PREFERENCES",
@@ -220,9 +222,9 @@ Window {
             "loading.subtitle": "10,000 个节点 | Prim 算法",
             "tooltip.node": "节点 %1\n%2, %3",
             "tooltip.edge": "%1 ↔ %2\n容量: %3\n长度: %4",
-            "sidebar.view": "全景视图",
-            "sidebar.traffic": "车流动态",
-            "sidebar.route": "智能寻路",
+            "sidebar.simulation": "模拟地图",
+            "sidebar.realmap": "现实地图",
+            "sidebar.route": "寻路模式",
             "sidebar.settings": "系统设定",
             "rightpanel.header": "导航",
             "rightpanel.title": "控制中心",
@@ -237,6 +239,7 @@ Window {
             "rightpanel.lod.agg": "激进",
             "rightpanel.autozoom.on": "自动缩放 LOD: 开",
             "rightpanel.autozoom.off": "自动缩放 LOD: 关",
+            "rightpanel.mapFile": "当前地图",
             "rightpanel.nodeColor": "节点颜色",
             "rightpanel.edgeColor": "边核心颜色",
             "settings.header": "首选项",
@@ -615,6 +618,19 @@ Window {
         z: 10
         mapView: mapView
         blurTarget: mapContainer
+        currentPage: mainWindow.currentPage
+        onSimulationClicked: {
+            mainWindow.currentPage = "simulation"
+            globalIsGenerating = true
+            globalGraph.reloadSimulationMap()
+        }
+        onRealMapClicked: {
+            mainWindow.currentPage = "real"
+            if (globalGraph.availableMaps.length > 0) {
+                globalIsGenerating = true
+                globalGraph.switchToMap(globalGraph.currentMapIndex >= 0 ? globalGraph.currentMapIndex : 0)
+            }
+        }
         onSettingsClicked: settingsDialog.visible = true
     }
 
@@ -628,9 +644,13 @@ Window {
         blurTarget: mapContainer
         isGenerating: globalIsGenerating
         active: !showingDetailPanel
+        currentPage: mainWindow.currentPage
         onRegenerateClicked: {
             globalIsGenerating = true
             globalGraph.regenerateGraph(10000)
+        }
+        onMapSwitchRequested: {
+            globalIsGenerating = true
         }
     }
     

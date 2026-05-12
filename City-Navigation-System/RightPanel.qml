@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Effects
 
 Item {
     id: root
@@ -11,7 +12,9 @@ Item {
     property Item blurTarget: null
     property bool isGenerating: false
     property bool active: true
+    property string currentPage: "simulation"
     signal regenerateClicked()
+    signal mapSwitchRequested()
 
     Behavior on x { NumberAnimation { duration: 450; easing.type: Easing.OutQuint } }
 
@@ -109,12 +112,136 @@ Item {
             Text { text: (mapView ? mapView.zoom.toFixed(2) : "1.0") + "x"; color: theme.textColor; font.pixelSize: 14; font.weight: Font.Medium; Layout.alignment: Qt.AlignRight }
         }
 
-        Rectangle { Layout.fillWidth: true; height: 1; color: theme.dividerColor }
-        
+        Rectangle { Layout.fillWidth: true; height: 1; color: theme.dividerColor; visible: root.currentPage === "real" }
+
+        // Map file selector (only in real map mode)
+        RowLayout {
+            visible: root.currentPage === "real"
+            Layout.fillWidth: true
+            spacing: 24
+            Text {
+                text: i18n.t("rightpanel.mapFile")
+                color: theme.subTextColor
+                font.pixelSize: 14
+                Layout.fillWidth: true
+            }
+
+            ComboBox {
+                id: mapCombo
+                model: globalGraph.availableMaps
+                currentIndex: globalGraph.currentMapIndex
+                Layout.preferredWidth: 180
+                font.pixelSize: 13
+                enabled: model && model.length > 0
+                onCurrentIndexChanged: {
+                    globalGraph.switchToMap(currentIndex)
+                    root.mapSwitchRequested()
+                }
+
+                delegate: ItemDelegate {
+                    width: mapCombo.width - 8
+                    x: 4
+                    height: 40
+                    contentItem: Text {
+                        text: modelData
+                        color: highlighted ? theme.accentColor : theme.textColor
+                        font.pixelSize: 13
+                        font.weight: highlighted ? Font.Medium : Font.Normal
+                        verticalAlignment: Text.AlignVCenter
+                        elide: Text.ElideRight
+                    }
+                    background: Rectangle {
+                        radius: 8
+                        color: highlighted ? theme.activePill : "transparent"
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+                    highlighted: mapCombo.highlightedIndex === index
+                }
+
+                indicator: Canvas {
+                    x: mapCombo.width - width - 12
+                    y: (mapCombo.height - height) / 2
+                    width: 10
+                    height: 6
+                    contextType: "2d"
+                    onPaint: {
+                        var ctx = getContext("2d");
+                        ctx.reset();
+                        ctx.moveTo(0, 0);
+                        ctx.lineTo(width, 0);
+                        ctx.lineTo(width / 2, height);
+                        ctx.closePath();
+                        ctx.fillStyle = theme.subTextColor;
+                        ctx.fill();
+                    }
+                }
+
+                background: Rectangle {
+                    implicitHeight: 40
+                    color: theme.buttonBg
+                    border.color: mapCombo.visualFocus ? theme.accentColor : theme.panelBorder
+                    border.width: 1
+                    radius: 10
+                    Behavior on border.color { ColorAnimation { duration: 200 } }
+                }
+
+                contentItem: Text {
+                    text: mapCombo.displayText
+                    font: mapCombo.font
+                    color: theme.textColor
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                    leftPadding: 16
+                    rightPadding: 32
+                }
+
+                popup: Popup {
+                    y: mapCombo.height + 6
+                    width: mapCombo.width
+                    implicitHeight: contentItem.implicitHeight + 16
+                    padding: 8
+
+                    contentItem: ListView {
+                        clip: true
+                        implicitHeight: contentHeight
+                        model: mapCombo.popup.visible ? mapCombo.delegateModel : null
+                        currentIndex: mapCombo.highlightedIndex
+                        ScrollIndicator.vertical: ScrollIndicator { }
+                    }
+
+                    background: Rectangle {
+                        color: Qt.rgba(theme.panelColor.r, theme.panelColor.g, theme.panelColor.b, 0.95)
+                        border.color: theme.panelBorder
+                        border.width: 1
+                        radius: 16
+
+                        layer.enabled: true
+                        layer.effect: MultiEffect {
+                            shadowEnabled: true
+                            shadowBlur: 0.8
+                            shadowColor: Qt.rgba(0, 0, 0, 0.4)
+                            shadowVerticalOffset: 8
+                        }
+                    }
+
+                    enter: Transition {
+                        NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 200; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "scale"; from: 0.95; to: 1.0; duration: 200; easing.type: Easing.OutBack }
+                    }
+                    exit: Transition {
+                        NumberAnimation { property: "opacity"; from: 1.0; to: 0.0; duration: 150; easing.type: Easing.InCubic }
+                        NumberAnimation { property: "scale"; from: 1.0; to: 0.95; duration: 150; easing.type: Easing.InCubic }
+                    }
+                }
+            }
+        }
+
+        Rectangle { Layout.fillWidth: true; height: 1; color: theme.dividerColor; visible: root.currentPage === "real" }
+
         ColumnLayout {
             spacing: 12
             Layout.fillWidth: true
-            
+
             Button {
                 id: regenBtn
                 Layout.fillWidth: true

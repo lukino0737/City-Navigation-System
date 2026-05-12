@@ -9,8 +9,8 @@ class Graph;
 // 基础数据结构定义
 struct Node {
     int Node_id;
-    int x;
-    int y;
+    double x;
+    double y;
 };
 
 struct Edge {
