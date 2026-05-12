@@ -22,7 +22,7 @@ Window {
         target: globalGraph
         function onGraphRegenerated() {
             globalIsGenerating = false
-            if (mapView) mapView.update()
+            if (mapView) mapView.refresh()
         }
     }
 
@@ -218,7 +218,7 @@ Window {
         property var _zh: ({
             "app.title": "城市导航系统",
             "app.windowTitle": "城市导航系统",
-            "loading.title": "正在生成网络...",
+            "loading.title": "正在加载地图...",
             "loading.subtitle": "10,000 个节点 | Prim 算法",
             "tooltip.node": "节点 %1\n%2, %3",
             "tooltip.edge": "%1 ↔ %2\n容量: %3\n长度: %4",
