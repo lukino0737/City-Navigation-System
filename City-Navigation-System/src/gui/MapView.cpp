@@ -240,6 +240,16 @@ void MapView::onAnimTick() {
         m_animTimer->stop();
 }
 
+void MapView::setEdgeViewMode(int mode) {
+    mode = std::clamp(mode, 0, 2);
+    if (m_edgeViewMode != mode) {
+        m_edgeViewMode = mode;
+        m_topologyDirty = true;
+        emit edgeViewModeChanged();
+        update();
+    }
+}
+
 void MapView::setRouteMode(bool active) {
     if (m_routeMode != active) {
         m_routeMode = active;
@@ -386,6 +396,50 @@ void MapView::addZoomVelocity(double delta) {
     update();
 }
 
+void MapView::zoomAtPoint(double delta, double mouseX, double mouseY) {
+    updateRange();
+    double worldW = m_range.maxX - m_range.minX;
+    double worldH = m_range.maxY - m_range.minY;
+    if (worldW <= 0 || worldH <= 0 || width() <= 0 || height() <= 0) {
+        addZoomVelocity(delta);
+        return;
+    }
+
+    double baseScale = std::min(width() / worldW, height() / worldH);
+    double startX = (width()  - worldW * baseScale) / 2.0;
+    double startY = (height() - worldH * baseScale) / 2.0;
+
+    double oldZoom = m_zoom;
+    double instant = std::pow(1.04, delta);
+    double newZoom = std::clamp(m_zoom * instant, 0.1, 50.0);
+
+    double zoomRatio = newZoom / oldZoom;
+
+    // Adjust offset so the world point under the cursor stays fixed
+    double relX = (mouseX - startX) / width();
+    double relY = (mouseY - startY) / height();
+    m_zoomAnchor = QPointF(relX, relY); // store for momentum phase
+    m_offset.setX(m_offset.x() * zoomRatio + relX * (1.0 - zoomRatio));
+    m_offset.setY(m_offset.y() * zoomRatio + relY * (1.0 - zoomRatio));
+    m_zoom = newZoom;
+    emit zoomChanged();
+    applyOffsetBounds(m_offset);
+
+    m_zoomVelocity += delta * 0.028;
+    m_zoomVelocity = std::clamp(m_zoomVelocity, -0.22, 0.22);
+
+    if (!m_momentumActive) {
+        m_momentumActive = true;
+        emit momentumActiveChanged();
+    }
+    m_lastMomentumMs = QDateTime::currentMSecsSinceEpoch();
+
+    if (!m_momentumTimer->isActive())
+        m_momentumTimer->start();
+
+    update();
+}
+
 void MapView::onMomentumTick() {
     if (!m_momentumActive) {
         m_momentumTimer->stop();
@@ -397,14 +451,25 @@ void MapView::onMomentumTick() {
     m_lastMomentumMs = now;
 
     if (dt > 0.0 && dt < 0.5) {
+        double oldZoom = m_zoom;
         m_zoom *= (1.0 + m_zoomVelocity * dt * 60.0);
         m_zoom = std::clamp(m_zoom, 0.1, 50.0);
-        reclampOffset();
         m_zoomVelocity *= std::exp(-8.66 * dt);
+
+        // Mouse-anchored zoom during momentum
+        if (m_zoomAnchor.x() >= 0) {
+            double zoomRatio = m_zoom / oldZoom;
+            m_offset.setX(m_offset.x() * zoomRatio + m_zoomAnchor.x() * (1.0 - zoomRatio));
+            m_offset.setY(m_offset.y() * zoomRatio + m_zoomAnchor.y() * (1.0 - zoomRatio));
+            applyOffsetBounds(m_offset);
+        } else {
+            reclampOffset();
+        }
 
         if (std::abs(m_zoomVelocity) < 0.0003) {
             m_momentumActive = false;
             m_zoomVelocity = 0.0;
+            m_zoomAnchor = QPointF(-1, -1);
             m_momentumTimer->stop();
             emit momentumActiveChanged();
         }
@@ -431,8 +496,10 @@ void MapView::updateRange() {
 }
 
 void MapView::updateDegreeOrder() {
-    if (!m_graph || !m_degreeDirty) return;
+    if (!m_graph) return;
+    // Called from updatePaintNode() which already holds m_dataMutex shared
     const auto& nodes = m_graph->getAllNodes();
+    if (!m_degreeDirty && m_nodesByDegree.size() == nodes.size()) return;
     const auto& edges = m_graph->getAllEdges();
     int n = static_cast<int>(nodes.size());
     if (n == 0) return;
@@ -488,6 +555,7 @@ QPointF MapView::mapFromScreen(double sx, double sy) const {
 
 QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     if (!m_graph) return oldNode;
+    std::shared_lock<std::shared_mutex> dataLock(m_graph->dataMutex());
     updateRange();
     updateDegreeOrder();
 
@@ -626,7 +694,8 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
             m_topologyDirty = true;
         }
     }
-    int visibleCount = m_cachedVisibleCount;
+    int visibleCount = std::min(m_cachedVisibleCount, static_cast<int>(m_nodesByDegree.size()));
+
 
     if (m_hoveredEdgeSource != m_cachedHoverLo || m_hoveredEdgeTarget != m_cachedHoverHi) {
         m_topologyDirty = true; // Need to map hovered edge to macroscopic nodes
@@ -674,6 +743,7 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
 
         for (int k = 0; k < visibleCount; ++k) {
             int idx = m_nodesByDegree[k];
+            if (idx < 0 || static_cast<size_t>(idx) >= nodes.size()) continue;
             int vid = nodes[idx].Node_id;
             nodeOwner[vid] = vid;
             bfsQ.push(vid);
@@ -719,7 +789,16 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
             int lo = std::min(ownerSrc, ownerDst);
             int hi = std::max(ownerSrc, ownerDst);
             uint64_t key = (static_cast<uint64_t>(hi) << 32) | static_cast<uint64_t>(lo);
-            double ratio = (edge.capacity > 0) ? static_cast<double>(edge.currentCars) / edge.capacity : 0;
+            
+            double ratio = 0.0;
+            if (m_edgeViewMode == 1) { // Centrality
+                ratio = std::sqrt(edge.centrality);
+            } else if (m_edgeViewMode == 0) { // Traffic
+                ratio = (edge.capacity > 0) ? static_cast<double>(edge.currentCars) / edge.capacity : 0.0;
+            } else { // Original
+                ratio = 0.0;
+            }
+            
             // Direct edge: both endpoints are the visible owner nodes themselves
             bool isDirect = (edge.source == ownerSrc && edge.target == ownerDst)
                          || (edge.source == ownerDst && edge.target == ownerSrc);
@@ -749,6 +828,23 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
                 }
             }
             m_cachedLogicalEdges.push_back({static_cast<int>(lastKey & 0xFFFFFFFF), static_cast<int>(lastKey >> 32), maxRatio, maxCap, allDirect});
+        }
+
+        // Quantile normalization for centrality mode: map raw sqrt(centrality)
+        // to uniform [0,1] via rank, so the color ramp spans the full spectrum evenly.
+        if (m_edgeViewMode == 1 && !m_cachedLogicalEdges.empty()) {
+            std::vector<double> ratios;
+            ratios.reserve(m_cachedLogicalEdges.size());
+            for (const auto& le : m_cachedLogicalEdges)
+                ratios.push_back(le.ratio);
+
+            std::sort(ratios.begin(), ratios.end());
+
+            for (auto& le : m_cachedLogicalEdges) {
+                auto it = std::lower_bound(ratios.begin(), ratios.end(), le.ratio);
+                double quantile = static_cast<double>(it - ratios.begin()) / (ratios.size() - 1);
+                le.ratio = quantile;
+            }
         }
 
         m_cachedHoverLo = m_hoveredEdgeSource;
@@ -1015,11 +1111,15 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
             float radius = halfSize * sizeScale;
             for (int i = 0; i < chunkSize; ++i) {
                 int idx = m_nodesByDegree[chunkStart + i];
+                int base = i * NODE_VERTS_PER;
+                if (idx < 0 || static_cast<size_t>(idx) >= nodes.size()) {
+                    for(int j = 0; j < NODE_VERTS_PER; ++j) pVerts[base + j].set(0.0f, 0.0f, 0.0f, 0.0f);
+                    continue;
+                }
                 QPointF p = getBasePos(nodes[idx].x, nodes[idx].y);
                 float px  = static_cast<float>(p.x());
                 float py  = static_cast<float>(p.y());
 
-                int base = i * NODE_VERTS_PER;
                 float x0 = px - radius;
                 float y0 = py - radius;
                 float x1 = px + radius;

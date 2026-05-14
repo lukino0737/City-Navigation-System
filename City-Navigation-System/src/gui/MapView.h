@@ -12,7 +12,6 @@
 #include <QTimer>
 #include <QElapsedTimer>
 #include "../core/DataModel/Graph.h"
-#include "../core/modules/algorithm.h"
 
 #include <QSGTransformNode>
 
@@ -54,6 +53,7 @@ class MapView : public QQuickItem {
     Q_PROPERTY(QString selectionMode READ selectionMode NOTIFY selectionChanged)
     Q_PROPERTY(QColor selectionAccent READ selectionAccent WRITE setSelectionAccent NOTIFY styleChanged)
 
+    Q_PROPERTY(int edgeViewMode READ edgeViewMode WRITE setEdgeViewMode NOTIFY edgeViewModeChanged)
     Q_PROPERTY(bool routeMode READ routeMode WRITE setRouteMode NOTIFY routeModeChanged)
     Q_PROPERTY(int routeStartNodeId READ routeStartNodeId NOTIFY routeChanged)
     Q_PROPERTY(int routeEndNodeId READ routeEndNodeId NOTIFY routeChanged)
@@ -74,6 +74,9 @@ public:
     Q_INVOKABLE QVariantMap selectEdge(int source, int target);
     Q_INVOKABLE void clearSelection();
 
+    int edgeViewMode() const { return m_edgeViewMode; }
+    void setEdgeViewMode(int mode);
+
     bool routeMode() const { return m_routeMode; }
     void setRouteMode(bool active);
     int routeStartNodeId() const { return m_routeStartNodeId; }
@@ -88,6 +91,7 @@ public:
     }
 
     Q_INVOKABLE void addZoomVelocity(double delta);
+    Q_INVOKABLE void zoomAtPoint(double delta, double mouseX, double mouseY);
     void reclampOffset();
     void applyOffsetBounds(QPointF& p) const;
 
@@ -219,6 +223,7 @@ signals:
     void selectionInfoReady(QVariantMap info);
     void routeChanged();
     void routeModeChanged();
+    void edgeViewModeChanged();
     void pathResultReady(QVariantMap info);
 
 protected:
@@ -233,6 +238,8 @@ private:
 
     int m_hoveredEdgeSource = -1;
     int m_hoveredEdgeTarget = -1;
+    
+    int m_edgeViewMode = 0; // 0: traffic, 1: centrality, 2: original
 
     QColor m_edgeCoolColor = QColor(0, 255, 255);
     QColor m_edgeMidColor = QColor(127, 0, 255);
@@ -282,6 +289,7 @@ private:
     // Momentum zoom: velocity accumulated from wheel events, decayed each tick
     double m_zoomVelocity = 0.0;
     bool m_momentumActive = false;
+    QPointF m_zoomAnchor = QPointF(-1, -1); // anchor for mouse-centered momentum zoom
     QTimer* m_momentumTimer = nullptr;
     qint64 m_lastMomentumMs = 0;
 

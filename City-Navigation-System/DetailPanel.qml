@@ -52,8 +52,11 @@ Item {
                         if (infoData.type === "edge")
                             return i18n.t("detail.title.edge", infoData.source || "—", infoData.target || "—")
                         if (infoData.type === "path") {
-                            if (infoData.found)
-                                return i18n.t("detail.title.path.ok", infoData.startId || "—", infoData.endId || "—")
+                            if (infoData.found) {
+                                var sLabel = (infoData.startName && infoData.startName !== "") ? infoData.startName : ("#" + (infoData.startId || "—"))
+                                var eLabel = (infoData.endName && infoData.endName !== "") ? infoData.endName : ("#" + (infoData.endId || "—"))
+                                return i18n.t("detail.title.path.ok", sLabel, eLabel)
+                            }
                             else
                                 return i18n.t("detail.title.path.fail")
                         }
@@ -112,18 +115,21 @@ Item {
                                     rows.push({label: i18n.t("detail.path.hops"),         value: infoData.hopCount !== undefined ? infoData.hopCount : "—"})
                                     rows.push({label: i18n.t("detail.path.nodes"), value: infoData.nodeCount !== undefined ? infoData.nodeCount : "—"})
                                     rows.push({label: i18n.t("detail.path.time"), value: infoData.timeMs !== undefined ? infoData.timeMs.toFixed(2) + i18n.t("detail.path.timeUnit") : "—"})
-                                    // List named waypoints in the path
+                                    // List named waypoints in the path (vertical)
                                     var namedWaypoints = []
                                     if (infoData.pathNodeNames && infoData.pathNodeIds) {
                                         for (var pni = 0; pni < infoData.pathNodeNames.length; pni++) {
                                             var pname = infoData.pathNodeNames[pni]
                                             if (pname && pname !== "") {
-                                                namedWaypoints.push(pname + " (#" + infoData.pathNodeIds[pni] + ")")
+                                                namedWaypoints.push({num: infoData.pathNodeIds[pni], name: pname})
                                             }
                                         }
                                     }
                                     if (namedWaypoints.length > 0) {
-                                        rows.push({label: i18n.t("detail.path.namedNodes"), value: namedWaypoints.join(" → ")})
+                                        rows.push({label: i18n.t("detail.path.namedNodes"), value: namedWaypoints.length})
+                                        for (var wi = 0; wi < namedWaypoints.length; wi++) {
+                                            rows.push({label: "#" + namedWaypoints[wi].num, value: namedWaypoints[wi].name})
+                                        }
                                     }
                                 } else {
                                     rows.push({label: i18n.t("detail.path.start"), value: infoData.startId || "—"})

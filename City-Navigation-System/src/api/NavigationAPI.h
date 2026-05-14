@@ -21,6 +21,7 @@ struct Edge {
     double length;
     double capacity; 
     int currentCars; 
+    double centrality;
 };
 
 // 寻路结果包
@@ -56,7 +57,7 @@ namespace nlohmann {
     struct adl_serializer<Edge> {
         static void to_json(json& j, const Edge& e) {
             j = json{{"id", e.id}, {"source", e.source}, {"target", e.target}, 
-                     {"length", e.length}, {"capacity", e.capacity}, {"currentCars", e.currentCars}};
+                     {"length", e.length}, {"capacity", e.capacity}, {"currentCars", e.currentCars}, {"centrality", e.centrality}};
         }
         static void from_json(const json& j, Edge& e) {
             j.at("id").get_to(e.id);
@@ -65,6 +66,7 @@ namespace nlohmann {
             j.at("length").get_to(e.length);
             j.at("capacity").get_to(e.capacity);
             j.at("currentCars").get_to(e.currentCars);
+            e.centrality = j.value("centrality", 0.0);
         }
     };
 }

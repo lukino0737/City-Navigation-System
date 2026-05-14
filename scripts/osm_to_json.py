@@ -52,35 +52,77 @@ def download_city(city_name: str, mode: str = "drive") -> dict:
     print(f"  → 路网下载完成，耗时 {t_dl - t_start:.1f}s")
     print(f"  → 原始节点数: {G.number_of_nodes()}, 原始边数: {G.number_of_edges()}")
 
+    # ── 获取周边 POI 并匹配到节点 ──────────────────────────────────────
+    # 先记录投影前的 WGS84 包围盒，用于分块下载 POI
+    all_x = [data['x'] for _, data in G.nodes(data=True)]
+    all_y = [data['y'] for _, data in G.nodes(data=True)]
+    bbox_wgs = (min(all_x), min(all_y), max(all_x), max(all_y))  # (min_lon, min_lat, max_lon, max_lat)
+
     # ── 投影到 UTM 坐标系（米），与模拟地图量级一致 ──────────────────────
     print("正在投影到 UTM 坐标系...")
     G = ox.project_graph(G)
     print(f"  → 投影完成")
 
-    # ── 获取周边 POI 并匹配到节点 ──────────────────────────────────────
+    # ── 分块下载 POI ─────────────────────────────────────────────────────
     print("正在下载并匹配周边兴趣点 (POI)...")
     try:
-        # 下载包含 name 标签的设施、建筑、店铺等
-        pois = ox.features_from_place(city_name, tags={'name': True, 'amenity': True, 'building': True, 'shop': True})
-        
-        if not pois.empty:
+        # 将包围盒切分成网格，逐块下载以避免单次查询数据量过大
+        lat_span = bbox_wgs[3] - bbox_wgs[1]
+        lon_span = bbox_wgs[2] - bbox_wgs[0]
+        # 每块约 0.15° (~15 km)，平衡内存占用与 API 请求次数
+        TILE_DEG = 0.15
+        n_lat = max(1, int(lat_span / TILE_DEG) + 1)
+        n_lon = max(1, int(lon_span / TILE_DEG) + 1)
+        tile_lat = lat_span / n_lat
+        tile_lon = lon_span / n_lon
+        print(f"  → 将城市划分为 {n_lat}×{n_lon} 块，逐块下载...")
+
+        tags = {'name': True, 'amenity': True, 'building': True, 'shop': True}
+        pois_parts = []
+        total_tiles = n_lat * n_lon
+        from tqdm import tqdm
+        with tqdm(total=total_tiles, desc="  下载 POI", unit="块") as pbar:
+            for i in range(n_lat):
+                for j in range(n_lon):
+                    south = bbox_wgs[1] + i * tile_lat
+                    north = bbox_wgs[1] + (i + 1) * tile_lat
+                    west  = bbox_wgs[0] + j * tile_lon
+                    east  = bbox_wgs[0] + (j + 1) * tile_lon
+                    tile_bbox = (west, south, east, north)
+                    try:
+                        part = ox.features_from_bbox(tile_bbox, tags)
+                        if not part.empty:
+                            pois_parts.append(part)
+                    except Exception:
+                        pass
+                    pbar.update(1)
+
+        if pois_parts:
+            import pandas as pd
+            # osmnx 返回的 GeoDataFrame 以 (osmid, element_type) 为 MultiIndex
+            # 保留索引合并，用 index.duplicated() 去除跨网格边界的重复 POI
+            pois = pd.concat(pois_parts)
+            pois = pois[~pois.index.duplicated()].reset_index()
             print(f"  → 共下载到 {len(pois)} 个兴趣点，正在过滤和匹配...")
+
             # 过滤掉没有几何信息或没有名字的行
             pois = pois[pois.geometry.notnull() & pois['name'].notnull()]
-            
-            # 将 POI 投影到与路网图相同的 UTM 坐标系
-            pois = pois.to_crs(G.graph['crs'])
-            centroids = pois.geometry.centroid
-            
-            # 找到每个 POI 离得最近的路网节点
-            print("  → 计算 POI 与节点的最近距离映射...")
-            nearest_nodes = ox.distance.nearest_nodes(G, centroids.x, centroids.y)
-            
-            # 将 POI 的名字赋予对应的节点
-            for poi_name, node_id in zip(pois['name'], nearest_nodes):
-                if isinstance(poi_name, str) and poi_name.strip():
-                    G.nodes[node_id]['poi_name'] = poi_name.strip()
-            print(f"  → 成功提取并映射了 {len(pois)} 个兴趣点！")
+            if not pois.empty:
+                # 将 POI 投影到与路网图相同的 UTM 坐标系
+                pois = pois.to_crs(G.graph['crs'])
+                centroids = pois.geometry.centroid
+
+                # 找到每个 POI 离得最近的路网节点
+                print("  → 计算 POI 与节点的最近距离映射...")
+                nearest_nodes = ox.distance.nearest_nodes(G, centroids.x, centroids.y)
+
+                # 将 POI 的名字赋予对应的节点
+                for poi_name, node_id in zip(pois['name'], nearest_nodes):
+                    if isinstance(poi_name, str) and poi_name.strip():
+                        G.nodes[node_id]['poi_name'] = poi_name.strip()
+                print(f"  → 成功提取并映射了 {len(pois)} 个兴趣点！")
+            else:
+                print("  → 过滤后没有有效名称的 POI。")
         else:
             print("  → 未找到带有名称的兴趣点。")
     except Exception as e:
@@ -157,6 +199,52 @@ def download_city(city_name: str, mode: str = "drive") -> dict:
     named_count = sum(1 for n in nodes if n["name"])
     print(f"  → 最终 {named_count}/{len(nodes)} 个节点拥有地名")
 
+    # ── 计算边中心性 ───────────────────────────────────────────────────
+    print("正在计算边缘介数中心性 (可能需要几分钟)...")
+    try:
+        import networkx as nx
+        import random
+        # 为了实现进度条，我们手动进行采样循环 (Brandes' Algorithm 采样版)
+        all_nodes = list(G.nodes())
+        # 对于可视化而言，采样 400-600 个点足以勾勒出主要的城市交通骨干（必经之路）
+        k = 500 if len(all_nodes) > 500 else len(all_nodes)
+        seeds = random.sample(all_nodes, k)
+
+        if k < len(all_nodes):
+            print(f"  → 地图规模较大，正在通过采样 {k} 个种子节点进行估算...")
+
+        # 初始化结果字典 (针对 MultiDiGraph 的边 key)
+        edge_centrality = {e: 0.0 for e in G.edges(keys=True)}
+
+        # 使用 tqdm 包裹核心循环
+        from networkx.algorithms.centrality.betweenness import _single_source_shortest_path_basic
+
+        for s in tqdm(seeds, desc="中心性分析"):
+            # 1. 计算从种子点 s 到所有可达点的最短路径
+            S, P, sigma, _ = _single_source_shortest_path_basic(G, s)
+
+            # 2. 逆向累加路径贡献到边上 (Brandes 累加逻辑)
+            delta = dict.fromkeys(S, 0)
+            while S:
+                w = S.pop()
+                coeff = (1 + delta[w]) / sigma[w]
+                for v in P[w]:
+                    c = sigma[v] * coeff
+                    # 针对 MultiGraph，将中心性均匀分配给 v->w 之间的所有 key
+                    # 在 OSM 数据中通常只有 key=0，但为了严谨性进行分摊
+                    keys = G[v][w]
+                    if keys:
+                        val = c / len(keys)
+                        for key in keys:
+                            edge_centrality[(v, w, key)] += val
+                    delta[v] += c
+
+        max_cent = max(edge_centrality.values()) if edge_centrality else 1.0
+    except Exception as e:
+        print(f"  → 计算中心性失败，使用默认值 0.0: {e}")
+        edge_centrality = {}
+        max_cent = 1.0
+
     # ── 构建边列表 ─────────────────────────────────────────────────────
     print("正在转换边...")
     edges = []
@@ -196,6 +284,8 @@ def download_city(city_name: str, mode: str = "drive") -> dict:
                 highway = highway[0] if highway else ""
             capacity = capacity_map.get(str(highway), 150)
 
+        cent_value = edge_centrality.get((u, v, key), 0.0) / max_cent
+
         edges.append({
             "id": edge_id,
             "source": src,
@@ -203,6 +293,7 @@ def download_city(city_name: str, mode: str = "drive") -> dict:
             "length": round(length, 2),
             "capacity": round(capacity, 1),
             "currentCars": 0,
+            "centrality": round(cent_value, 4)
         })
         edge_id += 1
 

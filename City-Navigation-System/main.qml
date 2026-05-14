@@ -175,6 +175,10 @@ Window {
             "rightpanel.autozoom.on": "Auto-Zoom LOD: ON",
             "rightpanel.autozoom.off": "Auto-Zoom LOD: OFF",
             "rightpanel.mapFile": "Current Map",
+            "rightpanel.viewMode": "View Mode",
+            "rightpanel.viewMode.traffic": "Traffic",
+            "rightpanel.viewMode.centrality": "Centrality",
+            "rightpanel.viewMode.original": "Original",
             "rightpanel.nodeColor": "Node Color",
             "rightpanel.edgeColor": "Edge Core Color",
             "settings.header": "PREFERENCES",
@@ -244,6 +248,10 @@ Window {
             "rightpanel.autozoom.on": "自动缩放 LOD: 开",
             "rightpanel.autozoom.off": "自动缩放 LOD: 关",
             "rightpanel.mapFile": "当前地图",
+            "rightpanel.viewMode": "视图模式",
+            "rightpanel.viewMode.traffic": "路况状态",
+            "rightpanel.viewMode.centrality": "中心性视图",
+            "rightpanel.viewMode.original": "原始视图",
             "rightpanel.nodeColor": "节点颜色",
             "rightpanel.edgeColor": "边核心颜色",
             "settings.header": "首选项",
@@ -433,7 +441,7 @@ Window {
                 }
 
                 onWheel: (wheel) => {
-                    mapView.addZoomVelocity(wheel.angleDelta.y / 120.0)
+                    mapView.zoomAtPoint(wheel.angleDelta.y / 120.0, wheel.x, wheel.y)
                 }
 
                 function handleMapClick(mx, my) {
@@ -633,11 +641,15 @@ Window {
         currentPage: mainWindow.currentPage
         onSimulationClicked: {
             mainWindow.currentPage = "simulation"
+            mapView.clearRoute()
+            showingDetailPanel = false
             globalIsGenerating = true
             globalGraph.reloadSimulationMap()
         }
         onRealMapClicked: {
             mainWindow.currentPage = "real"
+            mapView.clearRoute()
+            showingDetailPanel = false
             if (globalGraph.availableMaps.length > 0) {
                 globalIsGenerating = true
                 globalGraph.switchToMap(globalGraph.currentMapIndex >= 0 ? globalGraph.currentMapIndex : 0)
@@ -658,11 +670,15 @@ Window {
         active: !showingDetailPanel
         currentPage: mainWindow.currentPage
         onRegenerateClicked: {
+            mapView.clearRoute()
             globalIsGenerating = true
             globalGraph.regenerateGraph(10000)
         }
         onMapSwitchRequested: {
             globalIsGenerating = true
+        }
+        onRouteClearRequested: {
+            showingDetailPanel = false
         }
     }
     
@@ -704,6 +720,20 @@ Window {
         
         onSwitched: (index) => {
             showingDetailPanel = (index === 1)
+        }
+    }
+
+    // Bottom blur gradient mask below ViewSwitcher
+    Rectangle {
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 80
+        z: 14
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: "transparent" }
+            GradientStop { position: 0.5; color: Qt.rgba(theme.bgColor.r, theme.bgColor.g, theme.bgColor.b, 0.7) }
+            GradientStop { position: 1.0; color: theme.bgColor }
         }
     }
 }

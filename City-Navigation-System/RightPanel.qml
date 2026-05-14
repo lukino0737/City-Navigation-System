@@ -15,6 +15,7 @@ Item {
     property string currentPage: "simulation"
     signal regenerateClicked()
     signal mapSwitchRequested()
+    signal routeClearRequested()
 
     Behavior on x { NumberAnimation { duration: 450; easing.type: Easing.OutQuint } }
 
@@ -75,10 +76,30 @@ Item {
         }
     }
 
-    ColumnLayout {
+    Flickable {
+        id: panelFlickable
         anchors.fill: parent
-        anchors.margins: 32
-        spacing: 28
+        contentWidth: width
+        contentHeight: innerColumn.implicitHeight + 80
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+
+        ScrollBar.vertical: ScrollBar {
+            policy: ScrollBar.AsNeeded
+            anchors.right: parent.right
+            anchors.rightMargin: 4
+            anchors.top: parent.top
+            anchors.topMargin: 32
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 32
+        }
+
+        ColumnLayout {
+            id: innerColumn
+            width: parent.width - 64
+            x: 32
+            y: 32
+            spacing: 28
 
         ColumnLayout {
             spacing: 4
@@ -96,18 +117,18 @@ Item {
                 font.weight: Font.Light
             }
         }
-        
+
         Rectangle { Layout.fillWidth: true; height: 1; color: theme.dividerColor }
-        
+
         GridLayout {
             columns: 2
             rowSpacing: 16
             columnSpacing: 24
             Layout.fillWidth: true
-            
+
             Text { text: i18n.t("rightpanel.nodes"); color: theme.subTextColor; font.pixelSize: 13 }
             Text { text: "10,000"; color: theme.textColor; font.pixelSize: 14; font.weight: Font.Medium; Layout.alignment: Qt.AlignRight }
-            
+
             Text { text: i18n.t("rightpanel.zoom"); color: theme.subTextColor; font.pixelSize: 13 }
             Text { text: (mapView ? mapView.zoom.toFixed(2) : "1.0") + "x"; color: theme.textColor; font.pixelSize: 14; font.weight: Font.Medium; Layout.alignment: Qt.AlignRight }
         }
@@ -134,6 +155,8 @@ Item {
                 font.pixelSize: 13
                 enabled: model && model.length > 0
                 onCurrentIndexChanged: {
+                    if (root.mapView) root.mapView.clearRoute()
+                    root.routeClearRequested()
                     globalGraph.switchToMap(currentIndex)
                     root.mapSwitchRequested()
                 }
@@ -206,6 +229,125 @@ Item {
                         implicitHeight: contentHeight
                         model: mapCombo.popup.visible ? mapCombo.delegateModel : null
                         currentIndex: mapCombo.highlightedIndex
+                        ScrollIndicator.vertical: ScrollIndicator { }
+                    }
+
+                    background: Rectangle {
+                        color: Qt.rgba(theme.panelColor.r, theme.panelColor.g, theme.panelColor.b, 0.95)
+                        border.color: theme.panelBorder
+                        border.width: 1
+                        radius: 16
+
+                        layer.enabled: true
+                        layer.effect: MultiEffect {
+                            shadowEnabled: true
+                            shadowBlur: 0.8
+                            shadowColor: Qt.rgba(0, 0, 0, 0.4)
+                            shadowVerticalOffset: 8
+                        }
+                    }
+
+                    enter: Transition {
+                        NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 200; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "scale"; from: 0.95; to: 1.0; duration: 200; easing.type: Easing.OutBack }
+                    }
+                    exit: Transition {
+                        NumberAnimation { property: "opacity"; from: 1.0; to: 0.0; duration: 150; easing.type: Easing.InCubic }
+                        NumberAnimation { property: "scale"; from: 1.0; to: 0.95; duration: 150; easing.type: Easing.InCubic }
+                    }
+                }
+            }
+        }
+
+        // View Mode Selector
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 24
+            Text {
+                text: i18n.t("rightpanel.viewMode")
+                color: theme.subTextColor
+                font.pixelSize: 14
+                Layout.fillWidth: true
+            }
+
+            ComboBox {
+                id: viewModeCombo
+                model: [i18n.t("rightpanel.viewMode.traffic"), i18n.t("rightpanel.viewMode.centrality"), i18n.t("rightpanel.viewMode.original")]
+                currentIndex: mapView ? mapView.edgeViewMode : 0
+                Layout.preferredWidth: 180
+                font.pixelSize: 13
+                onCurrentIndexChanged: {
+                    if (mapView) mapView.edgeViewMode = currentIndex
+                }
+
+                delegate: ItemDelegate {
+                    width: viewModeCombo.width - 8
+                    x: 4
+                    height: 40
+                    contentItem: Text {
+                        text: modelData
+                        color: highlighted ? theme.accentColor : theme.textColor
+                        font.pixelSize: 13
+                        font.weight: highlighted ? Font.Medium : Font.Normal
+                        verticalAlignment: Text.AlignVCenter
+                        elide: Text.ElideRight
+                    }
+                    background: Rectangle {
+                        radius: 8
+                        color: highlighted ? theme.activePill : "transparent"
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+                    highlighted: viewModeCombo.highlightedIndex === index
+                }
+
+                indicator: Canvas {
+                    x: viewModeCombo.width - width - 12
+                    y: (viewModeCombo.height - height) / 2
+                    width: 10
+                    height: 6
+                    contextType: "2d"
+                    onPaint: {
+                        var ctx = getContext("2d");
+                        ctx.reset();
+                        ctx.moveTo(0, 0);
+                        ctx.lineTo(width, 0);
+                        ctx.lineTo(width / 2, height);
+                        ctx.closePath();
+                        ctx.fillStyle = theme.subTextColor;
+                        ctx.fill();
+                    }
+                }
+
+                background: Rectangle {
+                    implicitHeight: 40
+                    color: theme.buttonBg
+                    border.color: viewModeCombo.visualFocus ? theme.accentColor : theme.panelBorder
+                    border.width: 1
+                    radius: 10
+                    Behavior on border.color { ColorAnimation { duration: 200 } }
+                }
+
+                contentItem: Text {
+                    text: viewModeCombo.displayText
+                    font: viewModeCombo.font
+                    color: theme.textColor
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                    leftPadding: 16
+                    rightPadding: 32
+                }
+
+                popup: Popup {
+                    y: viewModeCombo.height + 6
+                    width: viewModeCombo.width
+                    implicitHeight: contentItem.implicitHeight + 16
+                    padding: 8
+
+                    contentItem: ListView {
+                        clip: true
+                        implicitHeight: contentHeight
+                        model: viewModeCombo.popup.visible ? viewModeCombo.delegateModel : null
+                        currentIndex: viewModeCombo.highlightedIndex
                         ScrollIndicator.vertical: ScrollIndicator { }
                     }
 
@@ -454,6 +596,19 @@ Item {
                 }
             }
         }
-        Item { Layout.fillHeight: true }
+        Item { height: 48 }
+        }
+    }
+
+    // Gradient mask at bottom of panel — fade indicator for scrollable content
+    Rectangle {
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 48
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: "transparent" }
+            GradientStop { position: 1.0; color: theme.panelColor }
+        }
     }
 }
