@@ -1,8 +1,6 @@
 #include "algorithm.h"
 #include "../DataModel/Graph.h"
-#include <iostream>
 #include <vector>
-#include <string>
 #include <queue>
 #include <limits>
 #include <chrono> 
@@ -71,7 +69,7 @@ PathResult calculateShortestPath(int startId, int endId, bool considerTraffic,Gr
             
             double edgeWeight = edge.length;
             if (considerTraffic) {
-                edgeWeight = getEdgeTrafficWeight(edge.id); 
+                edgeWeight = getEdgeTrafficWeight(edge); 
             }
 
             double newCost = currentCost + edgeWeight;

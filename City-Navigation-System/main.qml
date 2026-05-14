@@ -156,7 +156,7 @@ Window {
             "loading.title": "Generating Network...",
             "loading.subtitle": "10,000 Nodes | Prim's Algorithm",
             "tooltip.node": "NODE %1\n%2, %3",
-            "tooltip.edge": "%1 ↔ %2\nCAPACITY: %3\nLENGTH: %4",
+            "tooltip.edge": "%1 ↔ %2\nCAPACITY: %3\nFLOW: %5\nLENGTH: %4",
             "sidebar.simulation": "Simulation",
             "sidebar.realmap": "Real Map",
             "sidebar.route": "Smart Routing",
@@ -206,6 +206,7 @@ Window {
             "detail.edge.source": "Source ID",
             "detail.edge.target": "Target ID",
             "detail.edge.capacity": "Capacity",
+            "detail.edge.currentCars": "Current Flow",
             "detail.edge.length": "Length",
             "detail.path.start": "Start Node",
             "detail.path.startName": "Start Name",
@@ -229,7 +230,7 @@ Window {
             "loading.title": "正在加载地图...",
             "loading.subtitle": "10,000 个节点",
             "tooltip.node": "节点 %1\n%2, %3",
-            "tooltip.edge": "%1 ↔ %2\n容量: %3\n长度: %4",
+            "tooltip.edge": "%1 ↔ %2\n容量: %3\n当前车流: %5\n长度: %4",
             "sidebar.simulation": "模拟地图",
             "sidebar.realmap": "现实地图",
             "sidebar.route": "寻路模式",
@@ -279,6 +280,7 @@ Window {
             "detail.edge.source": "起点 ID",
             "detail.edge.target": "终点 ID",
             "detail.edge.capacity": "容量",
+            "detail.edge.currentCars": "当前车流",
             "detail.edge.length": "长度",
             "detail.path.start": "起点",
             "detail.path.startName": "起点地名",
@@ -356,6 +358,11 @@ Window {
             nodeCoreAlpha: mapPalette.nodeCoreAlpha
             nodeGlowAlpha: mapPalette.nodeGlowAlpha
             nodeGlowSizeScale: mapPalette.nodeGlowSizeScale
+
+            onSelectionInfoReady: function(info) {
+                detailPanel.showInfo(info)
+            }
+            
             selectionAccent: theme.accentColor
 
             // Map Interactions
@@ -397,7 +404,7 @@ Window {
                     if (hoveredEdge.found) {
                         nodeTooltip.x = mx + 20
                         nodeTooltip.y = my + 20
-                        tooltipText.text = i18n.t("tooltip.edge", hoveredEdge.source, hoveredEdge.target, hoveredEdge.capacity, hoveredEdge.length.toFixed(1))
+                        tooltipText.text = i18n.t("tooltip.edge", hoveredEdge.source, hoveredEdge.target, hoveredEdge.capacity, hoveredEdge.length.toFixed(1), hoveredEdge.currentCars !== undefined ? hoveredEdge.currentCars : "—")
                         nodeTooltip.visible = true
                         
                         hoverNodeIndicator.visible = false

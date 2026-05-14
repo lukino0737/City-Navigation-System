@@ -268,7 +268,16 @@ Edge& Graph::getEdgeById(int edgeId) {
 void Graph::updateEdgeTraffic(int edgeId, int carCount) {
     std::lock_guard<std::recursive_mutex> lock(m_mutex);
     auto it = m_edgeIdToIndex.find(edgeId);
-    if (it != m_edgeIdToIndex.end()) m_edges[it->second].currentCars = carCount;
+    if (it != m_edgeIdToIndex.end()) {
+        m_edges[it->second].currentCars = carCount;
+        int source = m_edges[it->second].source;
+        for (auto& adjEdge : m_adjList[source]) {
+            if (adjEdge.id == edgeId) {
+                adjEdge.currentCars = carCount;
+                break;
+            }
+        }
+    }
 }
 
 const std::vector<Node>& Graph::getAllNodes() {

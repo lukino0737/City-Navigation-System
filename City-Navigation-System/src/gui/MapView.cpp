@@ -28,6 +28,42 @@ MapView::MapView(QQuickItem *parent) : QQuickItem(parent) {
     m_animTimer->setTimerType(Qt::PreciseTimer);
     m_animTimer->setInterval(16);
     connect(m_animTimer, &QTimer::timeout, this, &MapView::onAnimTick);
+
+    m_trafficTimer = new QTimer(this);
+    m_trafficTimer->setInterval(500); // 500ms for smooth traffic waves
+    connect(m_trafficTimer, &QTimer::timeout, this, [this]() {
+        if (m_graph && m_edgeViewMode == 0) { // Only update in traffic view mode
+            updateTrafficStatus(*m_graph);
+            m_topologyDirty = true; // Must rebuild topology to aggregate edge traffic ratios
+            
+            if (m_selectedEdgeSource != -1 && m_selectedEdgeTarget != -1) {
+                QVariantMap info;
+                Node n1 = m_graph->getNode(m_selectedEdgeSource);
+                Node n2 = m_graph->getNode(m_selectedEdgeTarget);
+                info["type"] = "edge";
+                info["source"] = m_selectedEdgeSource;
+                info["target"] = m_selectedEdgeTarget;
+                info["sourceX"] = n1.x;
+                info["sourceY"] = n1.y;
+                info["targetX"] = n2.x;
+                info["targetY"] = n2.y;
+
+                for (const auto& e : m_graph->getEdgesFrom(m_selectedEdgeSource)) {
+                    if (e.target == m_selectedEdgeTarget) {
+                        info["capacity"] = e.capacity;
+                        info["length"] = e.length;
+                        info["currentCars"] = e.currentCars;
+                        info["centrality"] = e.centrality;
+                        break;
+                    }
+                }
+                emit selectionInfoReady(info);
+            }
+            
+            update();
+        }
+    });
+    m_trafficTimer->start();
 }
 
 MapView::~MapView() {
@@ -206,6 +242,16 @@ QVariantMap MapView::selectEdge(int source, int target) {
     info["sourceY"] = n1.y;
     info["targetX"] = n2.x;
     info["targetY"] = n2.y;
+
+    for (const auto& e : m_graph->getEdgesFrom(source)) {
+        if (e.target == target) {
+            info["capacity"] = e.capacity;
+            info["length"] = e.length;
+            info["currentCars"] = e.currentCars;
+            info["centrality"] = e.centrality;
+            break;
+        }
+    }
 
     emit selectionChanged();
     emit selectionInfoReady(info);

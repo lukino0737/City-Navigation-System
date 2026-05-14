@@ -293,6 +293,8 @@ private:
     QTimer* m_momentumTimer = nullptr;
     qint64 m_lastMomentumMs = 0;
 
+    QTimer* m_trafficTimer = nullptr;
+
 private slots:
     void onMomentumTick();
     void onAnimTick();

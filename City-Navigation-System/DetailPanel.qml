@@ -98,6 +98,7 @@ Item {
                                 rows.push({label: i18n.t("detail.edge.source"),   value: infoData.source || "—"})
                                 rows.push({label: i18n.t("detail.edge.target"),   value: infoData.target || "—"})
                                 rows.push({label: i18n.t("detail.edge.capacity"),    value: infoData.capacity || "—"})
+                                rows.push({label: i18n.t("detail.edge.currentCars"), value: infoData.currentCars !== undefined ? infoData.currentCars : "—"})
                                 rows.push({label: i18n.t("detail.edge.length"),      value: infoData.length !== undefined ? infoData.length.toFixed(1) : "—"})
                             } else if (infoData.type === "path") {
                                 if (infoData.found) {

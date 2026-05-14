@@ -92,8 +92,8 @@ bool loadMap(Graph& graph, std::string filePath);
 // 成员 B 提供的接口 (空间搜索与动态车流)
 // ==========================================
 std::vector<Node> getNearestPoints(double x, double y, int count);
-void updateTrafficStatus();
-double getEdgeTrafficWeight(int edgeId);
+void updateTrafficStatus(Graph& graph);
+double getEdgeTrafficWeight(const Edge& edge);
 
 // ==========================================
 // 成员 A 提供的接口 (核心寻路引擎)
