@@ -1,5 +1,6 @@
 #include "MapView.h"
 #include "../core/modules/algorithm.h"
+#include "../core/modules/SpatialSearch.h"
 #include <QDateTime>
 #include <QImage>
 #include <QPainter>
@@ -274,7 +275,8 @@ QVariantMap MapView::selectEdge(int source, int target) {
 }
 
 void MapView::clearSelection() {
-  if (m_selectedNodeId == -1 && m_selectedEdgeSource == -1)
+  if (m_selectedNodeId == -1 && m_selectedEdgeSource == -1
+      && m_rangeHighlightNodeIds.empty() && m_rangeHighlightEdgeKeys.empty())
     return;
   m_selectedNodeId = -1;
   m_selectedEdgeSource = -1;
@@ -284,7 +286,11 @@ void MapView::clearSelection() {
   m_highlightedNodeIds.clear();
   m_nodeHighlightProgress = 0.0;
   m_animTimer->stop();
+  m_rangeHighlightNodeIds.clear();
+  m_rangeHighlightEdgeKeys.clear();
+  m_rangeHighlightDirty = true;
   emit selectionChanged();
+  emit rangeHighlightChanged();
   update();
 }
 
@@ -364,6 +370,41 @@ void MapView::clearRoute() {
   m_pathDirty = true;
   clearSelection();
   emit routeChanged();
+}
+
+void MapView::highlightNearestNodes(double x, double y) {
+  if (!m_graph) return;
+
+  SpatialSearch searcher(m_graph);
+  std::vector<Node> nearest = searcher.getNearestPoints(x, y, 100);
+
+  m_rangeHighlightNodeIds.clear();
+  m_rangeHighlightEdgeKeys.clear();
+
+  for (const auto& node : nearest) {
+    m_rangeHighlightNodeIds.insert(node.Node_id);
+
+    std::vector<Edge> edges = getEdgesFromNode(*m_graph, node.Node_id);
+    for (const auto& edge : edges) {
+      int lo = std::min(edge.source, edge.target);
+      int hi = std::max(edge.source, edge.target);
+      uint64_t ek = (static_cast<uint64_t>(hi) << 32) | static_cast<uint64_t>(lo);
+      m_rangeHighlightEdgeKeys.insert(ek);
+    }
+  }
+
+  m_rangeHighlightDirty = true;
+  emit rangeHighlightChanged();
+  update();
+}
+
+void MapView::clearRangeHighlight() {
+  if (m_rangeHighlightNodeIds.empty() && m_rangeHighlightEdgeKeys.empty()) return;
+  m_rangeHighlightNodeIds.clear();
+  m_rangeHighlightEdgeKeys.clear();
+  m_rangeHighlightDirty = true;
+  emit rangeHighlightChanged();
+  update();
 }
 
 QVariantMap MapView::getPathInfo() const {
@@ -1305,10 +1346,12 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
   // Rebuild selection / path overlay on top of base geometry when needed.
   // m_pathResult.success guards against zoom-triggered geometry rebuilds that
   // strip the path overlay via removeAllChildNodes().
-  if (m_selectionDirty || m_pathDirty || m_pathResult.success) {
+  if (m_selectionDirty || m_pathDirty || m_pathResult.success
+      || m_rangeHighlightDirty || !m_rangeHighlightNodeIds.empty()) {
     rebuildSelectionOverlay(mapNode, halfSize, pixelsPerUnit);
     m_selectionDirty = false;
     m_pathDirty = false;
+    m_rangeHighlightDirty = false;
   }
 
   return container;
@@ -1532,5 +1575,127 @@ void MapView::rebuildSelectionOverlay(QSGTransformNode *mapNode, float halfSize,
       pnn->setGeometry(png);
       mapNode->appendChildNode(pnn);
     }
+  }
+
+  // ── 5. Range highlight edges (green) ──
+  if (!m_rangeHighlightEdgeKeys.empty()) {
+    for (uint64_t ek : m_rangeHighlightEdgeKeys) {
+      int lo = static_cast<int>(ek & 0xFFFFFFFF);
+      int hi = static_cast<int>(ek >> 32);
+      Node n1 = m_graph->getNode(lo);
+      Node n2 = m_graph->getNode(hi);
+      QPointF p1 = getBasePos(n1.x, n1.y);
+      QPointF p2 = getBasePos(n2.x, n2.y);
+      double dx = p2.x() - p1.x();
+      double dy = p2.y() - p1.y();
+      double len = std::hypot(dx, dy);
+      if (len < 1e-5) continue;
+
+      double nx = dy / len;
+      double ny = -dx / len;
+      double w = std::clamp(pixelsPerUnit * 2.0, 2.0, 8.0);
+      double wx = nx * w / 2.0;
+      double wy = ny * w / 2.0;
+
+      QSGGeometryNode *ren = new QSGGeometryNode();
+      auto *rmat = new QSGVertexColorMaterial();
+      rmat->setFlag(QSGMaterial::Blending, true);
+      ren->setMaterial(rmat);
+      ren->setFlag(QSGNode::OwnsMaterial);
+      ren->setFlag(QSGNode::OwnsGeometry);
+
+      QSGGeometry *reg =
+          new QSGGeometry(QSGGeometry::defaultAttributes_ColoredPoint2D(), 6);
+      reg->setDrawingMode(QSGGeometry::DrawTriangles);
+      auto *rev = reg->vertexDataAsColoredPoint2D();
+      unsigned char rr = 0, rg = 255, rb = 0, ra = 160;
+      rev[0].set(p1.x() - wx, p1.y() - wy, rr, rg, rb, ra);
+      rev[1].set(p1.x() + wx, p1.y() + wy, rr, rg, rb, ra);
+      rev[2].set(p2.x() - wx, p2.y() - wy, rr, rg, rb, ra);
+      rev[3].set(p2.x() - wx, p2.y() - wy, rr, rg, rb, ra);
+      rev[4].set(p1.x() + wx, p1.y() + wy, rr, rg, rb, ra);
+      rev[5].set(p2.x() + wx, p2.y() + wy, rr, rg, rb, ra);
+      ren->setGeometry(reg);
+      mapNode->appendChildNode(ren);
+    }
+  }
+
+  // ── 6. Range highlight nodes (yellow circles) ──
+  if (!m_rangeHighlightNodeIds.empty()) {
+    if (!m_rangeNodeTexture) {
+      const int texSize = 64;
+      QImage image(texSize, texSize, QImage::Format_RGBA8888);
+      image.fill(Qt::transparent);
+      QPainter p(&image);
+      p.setRenderHint(QPainter::Antialiasing);
+
+      float cx = texSize / 2.0f;
+      float cy = texSize / 2.0f;
+
+      QColor yellow(255, 255, 0);
+
+      // Outer glow
+      QRadialGradient glowGrad(cx, cy, cx);
+      QColor innerGlow = yellow;
+      innerGlow.setAlphaF(std::clamp(static_cast<double>(m_nodeGlowAlpha), 0.0, 1.0));
+      QColor midGlow = yellow;
+      midGlow.setAlphaF(std::clamp(static_cast<double>(m_nodeGlowAlpha * 0.4), 0.0, 1.0));
+      QColor outerGlow = yellow;
+      outerGlow.setAlphaF(0.0);
+      glowGrad.setColorAt(0.0, innerGlow);
+      glowGrad.setColorAt(0.5, midGlow);
+      glowGrad.setColorAt(1.0, Qt::transparent);
+      p.setBrush(glowGrad);
+      p.setPen(Qt::NoPen);
+      p.drawEllipse(0, 0, texSize, texSize);
+
+      // Core
+      float coreRad = cx / m_nodeGlowSizeScale;
+      QRadialGradient coreGrad(cx, cy, coreRad);
+      QColor coreColor = yellow;
+      coreColor.setAlphaF(std::clamp(static_cast<double>(m_nodeCoreAlpha), 0.0, 1.0));
+      coreGrad.setColorAt(0.0, coreColor);
+      coreGrad.setColorAt(0.8, coreColor);
+      coreGrad.setColorAt(1.0, Qt::transparent);
+      p.setBrush(coreGrad);
+      p.setPen(Qt::NoPen);
+      p.drawEllipse(QRectF(cx - coreRad, cy - coreRad, coreRad * 2, coreRad * 2));
+
+      p.end();
+      m_rangeNodeTexture = window()->createTextureFromImage(image);
+    }
+
+    float rangeNodeRadius = halfSize * static_cast<float>(m_nodeGlowSizeScale);
+    int nodeCount = static_cast<int>(m_rangeHighlightNodeIds.size());
+    QSGGeometryNode *rnn = new QSGGeometryNode();
+    auto *rnmat = new QSGTextureMaterial();
+    rnmat->setTexture(m_rangeNodeTexture);
+    rnmat->setFlag(QSGMaterial::Blending, true);
+    rnn->setMaterial(rnmat);
+    rnn->setFlag(QSGNode::OwnsMaterial);
+    rnn->setFlag(QSGNode::OwnsGeometry);
+
+    QSGGeometry *rng = new QSGGeometry(
+        QSGGeometry::defaultAttributes_TexturedPoint2D(), nodeCount * 6);
+    rng->setDrawingMode(QSGGeometry::DrawTriangles);
+    auto *rnv = rng->vertexDataAsTexturedPoint2D();
+
+    int vi = 0;
+    for (int nid : m_rangeHighlightNodeIds) {
+      Node nd = m_graph->getNode(nid);
+      QPointF p = getBasePos(nd.x, nd.y);
+      float px = static_cast<float>(p.x());
+      float py = static_cast<float>(p.y());
+      float r = rangeNodeRadius;
+      rnv[vi + 0].set(px - r, py - r, 0.0f, 0.0f);
+      rnv[vi + 1].set(px + r, py - r, 1.0f, 0.0f);
+      rnv[vi + 2].set(px - r, py + r, 0.0f, 1.0f);
+      rnv[vi + 3].set(px - r, py + r, 0.0f, 1.0f);
+      rnv[vi + 4].set(px + r, py - r, 1.0f, 0.0f);
+      rnv[vi + 5].set(px + r, py + r, 1.0f, 1.0f);
+      vi += 6;
+    }
+    rnn->setGeometry(rng);
+    mapNode->appendChildNode(rnn);
   }
 }

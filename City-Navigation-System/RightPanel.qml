@@ -380,6 +380,118 @@ Item {
 
         Rectangle { Layout.fillWidth: true; height: 1; color: theme.dividerColor; visible: root.currentPage === "real" }
 
+        // Range highlight section
+        Rectangle { Layout.fillWidth: true; height: 1; color: theme.dividerColor }
+        ColumnLayout {
+            spacing: 12
+            Layout.fillWidth: true
+
+            Text {
+                text: i18n.t("rightpanel.rangeHighlight")
+                color: theme.subTextColor
+                font.pixelSize: 12
+                font.weight: Font.Bold
+            }
+
+            RowLayout {
+                spacing: 12
+                Text {
+                    text: "X:"
+                    color: theme.subTextColor
+                    font.pixelSize: 13
+                }
+                TextField {
+                    id: rangeXInput
+                    Layout.fillWidth: true
+                    font.pixelSize: 13
+                    color: theme.textColor
+                    validator: DoubleValidator {}
+                    background: Rectangle {
+                        implicitHeight: 36
+                        radius: 8
+                        color: theme.buttonBg
+                        border.color: rangeXInput.activeFocus ? theme.accentColor : theme.panelBorder
+                        border.width: 1
+                    }
+                }
+            }
+
+            RowLayout {
+                spacing: 12
+                Text {
+                    text: "Y:"
+                    color: theme.subTextColor
+                    font.pixelSize: 13
+                }
+                TextField {
+                    id: rangeYInput
+                    Layout.fillWidth: true
+                    font.pixelSize: 13
+                    color: theme.textColor
+                    validator: DoubleValidator {}
+                    background: Rectangle {
+                        implicitHeight: 36
+                        radius: 8
+                        color: theme.buttonBg
+                        border.color: rangeYInput.activeFocus ? theme.accentColor : theme.panelBorder
+                        border.width: 1
+                    }
+                }
+            }
+
+            RowLayout {
+                spacing: 12
+                Button {
+                    id: rangeConfirmBtn
+                    Layout.fillWidth: true
+                    text: i18n.t("rightpanel.rangeConfirm")
+                    onClicked: {
+                        if (mapView && rangeXInput.text && rangeYInput.text) {
+                            mapView.highlightNearestNodes(parseFloat(rangeXInput.text), parseFloat(rangeYInput.text))
+                        }
+                    }
+                    contentItem: Text {
+                        text: i18n.t("rightpanel.rangeConfirm")
+                        color: theme.textColor
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: 13
+                        font.weight: Font.Medium
+                    }
+                    background: Rectangle {
+                        implicitHeight: 40
+                        radius: 10
+                        color: rangeConfirmBtn.down ? theme.buttonDown : (rangeConfirmBtn.hovered ? theme.buttonHover : theme.buttonBg)
+                        border.color: rangeConfirmBtn.hovered ? theme.panelBorder : "transparent"
+                        border.width: 1
+                    }
+                }
+                Button {
+                    id: rangeClearBtn
+                    Layout.fillWidth: true
+                    text: i18n.t("rightpanel.rangeClear")
+                    onClicked: {
+                        if (mapView) mapView.clearRangeHighlight()
+                    }
+                    contentItem: Text {
+                        text: i18n.t("rightpanel.rangeClear")
+                        color: theme.subTextColor
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: 13
+                        font.weight: Font.Medium
+                    }
+                    background: Rectangle {
+                        implicitHeight: 40
+                        radius: 10
+                        color: rangeClearBtn.down ? theme.buttonDown : (rangeClearBtn.hovered ? theme.buttonHover : "transparent")
+                        border.color: rangeClearBtn.hovered ? theme.panelBorder : "transparent"
+                        border.width: 1
+                    }
+                }
+            }
+        }
+
         ColumnLayout {
             spacing: 12
             Layout.fillWidth: true

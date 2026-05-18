@@ -58,6 +58,7 @@ class MapView : public QQuickItem {
     Q_PROPERTY(int routeStartNodeId READ routeStartNodeId NOTIFY routeChanged)
     Q_PROPERTY(int routeEndNodeId READ routeEndNodeId NOTIFY routeChanged)
     Q_PROPERTY(QColor pathHighlightColor READ pathHighlightColor WRITE setPathHighlightColor NOTIFY styleChanged)
+    Q_PROPERTY(bool hasRangeHighlight READ hasRangeHighlight NOTIFY rangeHighlightChanged)
 
 public:
     explicit MapView(QQuickItem *parent = nullptr);
@@ -84,6 +85,10 @@ public:
     Q_INVOKABLE void selectRouteNode(int nodeId);
     Q_INVOKABLE void clearRoute();
     Q_INVOKABLE QVariantMap getPathInfo() const;
+
+    bool hasRangeHighlight() const { return !m_rangeHighlightNodeIds.empty(); }
+    Q_INVOKABLE void highlightNearestNodes(double x, double y);
+    Q_INVOKABLE void clearRangeHighlight();
 
     QColor pathHighlightColor() const { return m_pathHighlightColor; }
     void setPathHighlightColor(const QColor& c) {
@@ -225,6 +230,7 @@ signals:
     void routeModeChanged();
     void edgeViewModeChanged();
     void pathResultReady(QVariantMap info);
+    void rangeHighlightChanged();
 
 protected:
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
@@ -262,6 +268,7 @@ public:
     Q_INVOKABLE QPointF mapFromScreen(double sx, double sy) const;
 private:
     QSGTexture *m_nodeTexture = nullptr;
+    QSGTexture *m_rangeNodeTexture = nullptr;
     struct LogicalEdge {
         int u;
         int v;
@@ -335,6 +342,11 @@ private:
     double m_nodeHighlightProgress = 0.0;
     QTimer* m_animTimer = nullptr;
     qint64 m_animStartMs = 0;
+
+    // Range highlight state (coordinate-based nearest-N search)
+    std::unordered_set<int> m_rangeHighlightNodeIds;
+    std::unordered_set<uint64_t> m_rangeHighlightEdgeKeys;
+    bool m_rangeHighlightDirty = false;
 
     // Overlay child tracking
     int m_baseChildCount = 0;
