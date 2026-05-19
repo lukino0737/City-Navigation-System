@@ -11,6 +11,7 @@
 #include <QColor>
 #include <QTimer>
 #include <QElapsedTimer>
+#include <QFutureWatcher>
 #include "../core/DataModel/Graph.h"
 
 #include <QSGTransformNode>
@@ -137,12 +138,22 @@ public:
 
     int hoveredEdgeSource() const { return m_hoveredEdgeSource; }
     void setHoveredEdgeSource(int src) {
-        if (m_hoveredEdgeSource != src) { m_hoveredEdgeSource = src; emit hoveredEdgeChanged(); update(); }
+        if (m_hoveredEdgeSource != src) {
+            m_hoveredEdgeSource = src;
+            m_hoverDirty = true;
+            emit hoveredEdgeChanged();
+            update();
+        }
     }
 
     int hoveredEdgeTarget() const { return m_hoveredEdgeTarget; }
     void setHoveredEdgeTarget(int target) {
-        if (m_hoveredEdgeTarget != target) { m_hoveredEdgeTarget = target; emit hoveredEdgeChanged(); update(); }
+        if (m_hoveredEdgeTarget != target) {
+            m_hoveredEdgeTarget = target;
+            m_hoverDirty = true;
+            emit hoveredEdgeChanged();
+            update();
+        }
     }
 
     QColor edgeCoolColor() const { return m_edgeCoolColor; }
@@ -287,6 +298,7 @@ private:
     bool m_topologyDirty = true;
     bool m_geometryDirty = true;
     bool m_styleDirty = true;
+    bool m_hoverDirty = false;
 
     // Grid caching: skip rebuild when zoom/offset change is below threshold
     double m_cachedGridSpacing = -1.0;
@@ -301,6 +313,8 @@ private:
     qint64 m_lastMomentumMs = 0;
 
     QTimer* m_trafficTimer = nullptr;
+    QFutureWatcher<void> m_trafficWatcher;
+    std::atomic<bool> m_isTrafficSimulating{false};
 
 private slots:
     void onMomentumTick();

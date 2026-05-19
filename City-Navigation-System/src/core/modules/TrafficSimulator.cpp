@@ -38,11 +38,25 @@ void TrafficSimulator::invalidateTopologyCache() {
 void TrafficSimulator::updateTrafficStatus(Graph& graph) {
     m_simTime += TIDAL_TIME_STEP;
 
-    std::lock_guard<std::recursive_mutex> lock(graph.mutex());
+    // Use shared lock to allow concurrent reads (like rendering)
+    std::shared_lock<std::shared_mutex> dataLock(graph.dataMutex());
     const auto& edges = graph.getAllEdges();
+    const auto& nodes = graph.getAllNodes();
 
-    if (!m_topologyCached) {
+    if (!m_topologyCached || m_edgeIdToIdx.size() != edges.size()) {
+        // Drop shared lock and take exclusive lock if we need to rebuild cache
+        dataLock.unlock();
+        std::lock_guard<std::recursive_mutex> lock(graph.mutex());
         ensureTopologyCache(edges);
+        dataLock.lock();
+    }
+
+    // Build a fast node-id to position map for the noise function
+    // (We only need nodes involved in edges, but 10k nodes is fast to map)
+    std::unordered_map<int, std::pair<double, double>> nodeCoords;
+    nodeCoords.reserve(nodes.size());
+    for (const auto& n : nodes) {
+        nodeCoords[n.Node_id] = {n.x, n.y};
     }
 
     std::vector<int> delta_cars(edges.size(), 0);
@@ -83,19 +97,29 @@ void TrafficSimulator::updateTrafficStatus(Graph& graph) {
 
         delta_cars[i] -= actual_outflow;
 
-        Node n1 = graph.getNode(edge.source);
-        double noiseVal = smoothNoise(n1.x * NOISE_SPATIAL_SCALE, n1.y * NOISE_SPATIAL_SCALE);
-
-        if (noiseVal > TIDAL_NOISE_THRESHOLD && density < TIDAL_MAX_DENSITY) {
-            delta_cars[i] += static_cast<int>(edge.capacity * TIDAL_INJECTION_RATE);
+        auto nIt = nodeCoords.find(edge.source);
+        if (nIt != nodeCoords.end()) {
+            double noiseVal = smoothNoise(nIt->second.first * NOISE_SPATIAL_SCALE, nIt->second.second * NOISE_SPATIAL_SCALE);
+            if (noiseVal > TIDAL_NOISE_THRESHOLD && density < TIDAL_MAX_DENSITY) {
+                delta_cars[i] += static_cast<int>(edge.capacity * TIDAL_INJECTION_RATE);
+            }
         }
     }
+
+    std::vector<int> updateIds;
+    std::vector<int> updateCars;
+    updateIds.reserve(edges.size());
+    updateCars.reserve(edges.size());
 
     for (size_t i = 0; i < edges.size(); ++i) {
         int newCars = edges[i].currentCars + delta_cars[i];
         newCars = std::max(0, std::min(newCars, static_cast<int>(edges[i].capacity)));
-        graph.updateEdgeTraffic(edges[i].id, newCars);
+        updateIds.push_back(edges[i].id);
+        updateCars.push_back(newCars);
     }
+    
+    dataLock.unlock(); // Release read lock before applying updates
+    graph.batchUpdateTraffic(updateIds, updateCars);
 }
 
 double TrafficSimulator::getEdgeTrafficWeight(const Edge& edge) const {

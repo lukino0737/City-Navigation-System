@@ -9,7 +9,8 @@
 
 // 为了加速内层循环的比对，避免调用极慢的开根号 sqrt
 inline double calculateDistanceSq(const Node &a, const Node &b) {
-  return std::pow(a.x - b.x, 2) + std::pow(a.y - b.y, 2);
+  double dx = a.x - b.x, dy = a.y - b.y;
+  return dx * dx + dy * dy;
 }
 
 // 需要实际距离数值时的标准公式
@@ -98,8 +99,9 @@ bool generateAndSaveMap(int nodeCount, std::string filePath) {
     // 步骤 b：把这个离树干最近的点真正用双主路接合进公路网中
     if (parent[u] != -1) {
       double dist = calculateDistance(nodes[u], nodes[parent[u]]);
-      graph.addEdge(edgeIdCounter++, u, parent[u], dist, disCapArterial(gen));
-      graph.addEdge(edgeIdCounter++, parent[u], u, dist, disCapArterial(gen));
+      double cap = disCapArterial(gen);
+      graph.addEdge(edgeIdCounter++, u, parent[u], dist, cap, cap);
+      graph.addEdge(edgeIdCounter++, parent[u], u, dist, cap, cap);
     }
 
     // 步骤
@@ -172,11 +174,13 @@ bool generateAndSaveMap(int nodeCount, std::string filePath) {
 
       bool added = false;
       if (!hasEdge(graph, i, targetId)) {
-        graph.addEdge(edgeIdCounter++, i, targetId, dist, disCapLocal(gen));
+        double cap = disCapLocal(gen);
+        graph.addEdge(edgeIdCounter++, i, targetId, dist, cap, cap);
         added = true;
       }
       if (!hasEdge(graph, targetId, i)) {
-        graph.addEdge(edgeIdCounter++, targetId, i, dist, disCapLocal(gen));
+        double cap = disCapLocal(gen);
+        graph.addEdge(edgeIdCounter++, targetId, i, dist, cap, cap);
         added = true;
       }
       if (added)
@@ -188,10 +192,22 @@ bool generateAndSaveMap(int nodeCount, std::string filePath) {
             << " 节点与 " << edgeIdCounter << " 条双向通道。开始生成 Json ..."
             << std::endl;
 
-  // 【4】持久化存储
+  // 【4】计算基于图拓扑结构的边中心性
+  // 使用端点度数之和: centrality(e) = degree(u) + degree(v)
+  // 连接主要交叉口的边获得高中心性，通往死胡同的边获得低中心性
+  const auto& allEdges = graph.getAllEdges();
+  std::unordered_map<int, int> degree;
+  for (const auto& e : allEdges) {
+    degree[e.source]++;
+    degree[e.target]++;
+  }
+  for (const auto& e : allEdges) {
+    graph.updateEdgeCentrality(e.id, degree[e.source] + degree[e.target]);
+  }
+
+  // 【5】持久化存储
   return graph.save(filePath);
 }
 
-bool loadMap(Graph &graph, std::string filePath) {
-  return graph.load(filePath);
-}
+
+

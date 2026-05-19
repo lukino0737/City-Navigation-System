@@ -85,8 +85,7 @@ std::vector<Edge> getEdgesFromNode(Graph& graph, int nodeId);
 
 // 生成地图并存盘
 bool generateAndSaveMap(int nodeCount, std::string filePath);
-// 读取地图文件到内存
-bool loadMap(Graph& graph, std::string filePath); 
+
 
 // ==========================================
 // 成员 B 提供的接口 (空间搜索与动态车流)

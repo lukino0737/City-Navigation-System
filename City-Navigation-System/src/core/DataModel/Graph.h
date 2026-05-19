@@ -60,12 +60,17 @@ public:
     std::vector<Edge>& getEdgesFrom(int nodeId);
     Edge& getEdgeById(int edgeId);
     void updateEdgeTraffic(int edgeId, int carCount);
+    void batchUpdateTraffic(const std::vector<int>& edgeIds, const std::vector<int>& carCounts);
+    void updateEdgeCentrality(int edgeId, double centrality);
 
     const std::vector<Node>& getAllNodes();
     const std::vector<Edge>& getAllEdges();
 
     bool addNode(int id, double x, double y, const std::string& name = "");
     bool addEdge(int id, int source, int target, double length, double capacity, double centrality = 0.0);
+
+    void rebuildIndices();
+    void loadMapInBackground(const QString& filePath, int mapIndex);
 };
 
 // Global helper declarations

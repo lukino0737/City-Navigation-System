@@ -16,6 +16,7 @@ find_package(Qt${QT_VERSION_MAJOR}
     COMPONENTS
         Quick
     QuickControls2
+    Concurrent
 )
 qt_standard_project_setup()
 
@@ -74,6 +75,7 @@ target_link_libraries(${PROJECT_NAME}
     PUBLIC
         Qt::Quick
     Qt::QuickControls2
+    Qt::Concurrent
 )
 
 

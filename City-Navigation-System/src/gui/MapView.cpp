@@ -18,6 +18,9 @@
 #include <vector>
 
 
+#include <QtConcurrent>
+#include <QFuture>
+
 MapView::MapView(QQuickItem *parent) : QQuickItem(parent) {
   setFlag(ItemHasContents, true);
   m_zoom = 0.9;
@@ -31,39 +34,49 @@ MapView::MapView(QQuickItem *parent) : QQuickItem(parent) {
   m_animTimer->setInterval(16);
   connect(m_animTimer, &QTimer::timeout, this, &MapView::onAnimTick);
 
+  // Setup async traffic watcher
+  connect(&m_trafficWatcher, &QFutureWatcher<void>::finished, this, [this]() {
+    m_isTrafficSimulating = false;
+    m_styleDirty = true;
+
+    // Update selection info if an edge is selected
+    if (m_graph && m_selectedEdgeSource != -1 && m_selectedEdgeTarget != -1) {
+      QVariantMap info;
+      Node n1 = m_graph->getNode(m_selectedEdgeSource);
+      Node n2 = m_graph->getNode(m_selectedEdgeTarget);
+      info["type"] = "edge";
+      info["source"] = m_selectedEdgeSource;
+      info["target"] = m_selectedEdgeTarget;
+      info["sourceX"] = n1.x;
+      info["sourceY"] = n1.y;
+      info["targetX"] = n2.x;
+      info["targetY"] = n2.y;
+
+      // Use mutex to safely read graph state
+      std::lock_guard<std::recursive_mutex> lock(m_graph->mutex());
+      for (const auto &e : m_graph->getEdgesFrom(m_selectedEdgeSource)) {
+        if (e.target == m_selectedEdgeTarget) {
+          info["capacity"] = e.capacity;
+          info["length"] = e.length;
+          info["currentCars"] = e.currentCars;
+          info["centrality"] = e.centrality;
+          break;
+        }
+      }
+      emit selectionInfoReady(info);
+    }
+    update();
+  });
+
   m_trafficTimer = new QTimer(this);
   m_trafficTimer->setInterval(500); // 500ms for smooth traffic waves
   connect(m_trafficTimer, &QTimer::timeout, this, [this]() {
-    if (m_graph && m_edgeViewMode == 0) { // Only update in traffic view mode
-      updateTrafficStatus(*m_graph);
-      m_topologyDirty =
-          true; // Must rebuild topology to aggregate edge traffic ratios
-
-      if (m_selectedEdgeSource != -1 && m_selectedEdgeTarget != -1) {
-        QVariantMap info;
-        Node n1 = m_graph->getNode(m_selectedEdgeSource);
-        Node n2 = m_graph->getNode(m_selectedEdgeTarget);
-        info["type"] = "edge";
-        info["source"] = m_selectedEdgeSource;
-        info["target"] = m_selectedEdgeTarget;
-        info["sourceX"] = n1.x;
-        info["sourceY"] = n1.y;
-        info["targetX"] = n2.x;
-        info["targetY"] = n2.y;
-
-        for (const auto &e : m_graph->getEdgesFrom(m_selectedEdgeSource)) {
-          if (e.target == m_selectedEdgeTarget) {
-            info["capacity"] = e.capacity;
-            info["length"] = e.length;
-            info["currentCars"] = e.currentCars;
-            info["centrality"] = e.centrality;
-            break;
-          }
-        }
-        emit selectionInfoReady(info);
-      }
-
-      update();
+    if (m_graph && m_edgeViewMode == 0 && !m_isTrafficSimulating) {
+      m_isTrafficSimulating = true;
+      QFuture<void> future = QtConcurrent::run([this]() {
+          updateTrafficStatus(*m_graph);
+      });
+      m_trafficWatcher.setFuture(future);
     }
   });
   m_trafficTimer->start();
@@ -846,8 +859,7 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
 
   if (m_hoveredEdgeSource != m_cachedHoverLo ||
       m_hoveredEdgeTarget != m_cachedHoverHi) {
-    m_topologyDirty = true; // Need to map hovered edge to macroscopic nodes
-    m_geometryDirty = true;
+    m_hoverDirty = true;
   }
 
   if (m_geometryDirty || m_topologyDirty || m_styleDirty) {
@@ -866,20 +878,20 @@ QSGNode *MapView::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
   matrix.scale(s, s);
   mapNode->setMatrix(matrix);
 
-  // Selection / path-only dirty → rebuild overlay, skip base geometry
-  // (animation frames)
+  // Selection / path / hover-only dirty → rebuild overlay, skip base geometry
   if (!m_topologyDirty && !m_geometryDirty && !m_styleDirty &&
-      (m_selectionDirty || m_pathDirty)) {
+      (m_selectionDirty || m_pathDirty || m_hoverDirty || m_rangeHighlightDirty)) {
     rebuildSelectionOverlay(mapNode, halfSize, pixelsPerUnit);
     m_selectionDirty = false;
     m_pathDirty = false;
+    m_hoverDirty = false;
+    m_rangeHighlightDirty = false;
     return container;
   }
 
   if (!m_topologyDirty && !m_geometryDirty && !m_styleDirty &&
-      !m_selectionDirty && !m_pathDirty) {
-    return container; // 只有 offset 改变或轻微缩放时，直接返回，实现 0
-                      // 成本高帧率
+      !m_selectionDirty && !m_pathDirty && !m_hoverDirty && !m_rangeHighlightDirty) {
+    return container; // 只有 offset 改变或轻微缩放时，直接返回
   }
 
   if (m_topologyDirty) {
