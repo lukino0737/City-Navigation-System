@@ -112,7 +112,16 @@ Item {
                                     if (endName && endName !== "") {
                                         rows.push({label: i18n.t("detail.path.endName"), value: endName})
                                     }
-                                    rows.push({label: i18n.t("detail.path.cost"),   value: infoData.totalCost !== undefined ? infoData.totalCost.toFixed(2) : "—"})
+                                    var formatTime = function(mins) {
+                                        if (mins === undefined) return "—"
+                                        var h = Math.floor(mins / 60)
+                                        var m = Math.round(mins % 60)
+                                        if (h > 0) {
+                                            return h + i18n.t("time.hours") + m + i18n.t("time.minutes")
+                                        }
+                                        return m + i18n.t("time.minutes")
+                                    }
+                                    rows.push({label: i18n.t("detail.path.cost"),   value: formatTime(infoData.totalCost)})
                                     rows.push({label: i18n.t("detail.path.hops"),         value: infoData.hopCount !== undefined ? infoData.hopCount : "—"})
                                     rows.push({label: i18n.t("detail.path.nodes"), value: infoData.nodeCount !== undefined ? infoData.nodeCount : "—"})
                                     rows.push({label: i18n.t("detail.path.time"), value: infoData.timeMs !== undefined ? infoData.timeMs.toFixed(2) + i18n.t("detail.path.timeUnit") : "—"})

@@ -153,6 +153,8 @@ Window {
         property var _en: ({
             "app.title": "City Navigation System",
             "app.windowTitle": "City Navigation System - Premium Edition",
+            "time.hours": "h ",
+            "time.minutes": "m",
             "loading.title": "Generating Network...",
             "loading.subtitle": "10,000 Nodes | Prim's Algorithm",
             "tooltip.node": "NODE %1\n%2, %3",
@@ -230,6 +232,8 @@ Window {
         property var _zh: ({
             "app.title": "城市导航系统",
             "app.windowTitle": "城市导航系统",
+            "time.hours": "小时 ",
+            "time.minutes": "分钟",
             "loading.title": "正在加载地图...",
             "loading.subtitle": "10,000 个节点",
             "tooltip.node": "节点 %1\n%2, %3",
@@ -258,7 +262,7 @@ Window {
             "rightpanel.viewMode.original": "原始视图",
             "rightpanel.nodeColor": "节点颜色",
             "rightpanel.edgeColor": "边核心颜色",
-            "rightpanel.rangeHighlight": "范围高亮",
+            "rightpanel.rangeHighlight": "附近节点",
             "rightpanel.rangeConfirm": "确认",
             "rightpanel.rangeClear": "清除",
             "settings.header": "首选项",

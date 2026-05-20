@@ -20,12 +20,9 @@ private:
     double smoothNoise(double x, double y);
     void ensureTopologyCache(const std::vector<Edge>& edges);
 
-    // BPR (Bureau of Public Roads) 阻抗函数参数
-    static constexpr double BPR_ALPHA = 0.15;
-    static constexpr double BPR_BETA = 4.0;
-    static constexpr double FREE_FLOW_TIME_COEFF = 0.1;
-
-    // Greenshields 速度-密度线性关系模型参数
+    // 现实化路况模型参数
+    static constexpr double TRAFFIC_SPEED_COEFF = 0.015; // c: 约 40km/h 对应的 min/unit
+    static constexpr double CONGESTION_THRESHOLD = 0.8;  // x 临界值
     static constexpr double MAX_SPEED_COEFF = 0.2;
 
     // 潮汐交通流参数

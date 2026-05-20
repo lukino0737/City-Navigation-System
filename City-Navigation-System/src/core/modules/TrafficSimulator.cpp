@@ -125,11 +125,14 @@ void TrafficSimulator::updateTrafficStatus(Graph& graph) {
 double TrafficSimulator::getEdgeTrafficWeight(const Edge& edge) const {
     if (edge.capacity <= 0) return DISCONNECTED_WEIGHT;
 
-    double v_c_ratio = static_cast<double>(edge.currentCars) / edge.capacity;
-    double free_flow_time = FREE_FLOW_TIME_COEFF * edge.length;
-    double actual_time = free_flow_time * (1.0 + BPR_ALPHA * std::pow(v_c_ratio, BPR_BETA));
-
-    return actual_time;
+    double x = static_cast<double>(edge.currentCars) / edge.capacity;
+    double f_x = 1.0;
+    if (x > CONGESTION_THRESHOLD) {
+        f_x = 1.0 + std::exp(x);
+    }
+    
+    // T = c * L * f(x)
+    return TRAFFIC_SPEED_COEFF * edge.length * f_x;
 }
 
 // 保持向后兼容的自由函数，委托给 TrafficSimulator 单例
